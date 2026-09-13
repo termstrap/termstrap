@@ -140,12 +140,12 @@ Termstrap implements a subset of Bootstrap 5 CSS classes tailored for terminal g
 
 | Breakpoint | Terminal Width (Cols) |
 | :--- | :--- |
-| `xs` | `< 576` |
-| `sm` | `≥ 576` |
-| `md` | `≥ 768` |
-| `lg` | `≥ 992` |
-| `xl` | `≥ 1200` |
-| `xxl` | `≥ 1400` |
+| `xs` | `< 70` |
+| `sm` | `≥ 70` |
+| `md` | `≥ 100` |
+| `lg` | `≥ 130` |
+| `xl` | `≥ 160` |
+| `xxl` | `≥ 190` |
 
 ### Spacing (Padding & Margin)
 * **Padding**: `p-0` through `p-5`, `px-*`, `py-*`, `pt-*`, `pb-*`, `ps-*`, `pe-*`

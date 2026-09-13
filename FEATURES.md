@@ -31,12 +31,12 @@ Le système de grille repose sur une division en 12 colonnes avec calcul dynamiq
 
 | Breakpoint | Préfixe de classe | Largeur minimale requise |
 | :--- | :--- | :--- |
-| **xs** (Extra Small) | `.col-*` | `< 60` colonnes |
-| **sm** (Small) | `.col-sm-*` | $\ge 60$ colonnes |
-| **md** (Medium) | `.col-md-*` | $\ge 80$ colonnes |
-| **lg** (Large) | `.col-lg-*` | $\ge 120$ colonnes |
+| **xs** (Extra Small) | `.col-*`, `.col-xs-*` | `< 70` colonnes |
+| **sm** (Small) | `.col-sm-*` | $\ge 70$ colonnes |
+| **md** (Medium) | `.col-md-*` | $\ge 100$ colonnes |
+| **lg** (Large) | `.col-lg-*` | $\ge 130$ colonnes |
 | **xl** (Extra Large) | `.col-xl-*` | $\ge 160$ colonnes |
-
+| **xxl** (Extra Extra Large) | `.col-xxl-*` | $\ge 190$ colonnes |
 ### Comportement
 - **Empilement automatique (*Stacking*)** : Si la largeur du terminal est inférieure au breakpoint spécifié (ex: un `.col-md-6` affiché sur un terminal de 50 colonnes), la colonne s'empile verticalement à 100% de la largeur.
 - **Multi-breakpoints** : Vous pouvez cumuler plusieurs classes responsives (ex: `class="col-sm-12 col-md-6"`).
