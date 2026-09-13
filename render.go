@@ -1,6 +1,7 @@
 package termstrap
 
 import (
+	"fmt"
 	"image"
 	"io"
 	"net/http"
@@ -39,6 +40,8 @@ type Model struct {
 	Stylesheets []string // Additional CSS stylesheets
 	Width       int      // Terminal width in characters
 	RootPath    string   // Base path for local images
+	// DisableHyperlinks disables emitting OSC 8 ANSI hyperlinks for <a> tags.
+	DisableHyperlinks bool
 
 	// ImageRenderer overrides the default image renderer.
 	ImageRenderer termimage.Renderer
@@ -160,7 +163,41 @@ func (m Model) renderWithOverlays(withOverlays bool) (string, []ImageOverlay, er
 	ComputeLayout(renderTree, termWidth)
 
 	var overlays []ImageOverlay
-	output := m.renderNode(renderTree, 0, 0, &overlays, 0)
+	var links []string
+	output := m.renderNode(renderTree, 0, 0, &overlays, 0, &links)
+
+	// Expand link placeholders into real OSC 8 sequences without breaking line wrapping
+	for id, url := range links {
+		startPlaceholder := fmt.Sprintf("\x1b[999000;%dm", id)
+		endPlaceholder := fmt.Sprintf("\x1b[999001;%dm", id)
+		osc8Start := fmt.Sprintf("\x1b]8;id=link_%d;%s\x1b\\", id, url)
+		osc8End := "\x1b]8;;\x1b\\"
+
+		// If wrapping broke the link across lines, ensure every line starts OSC 8 and ends OSC 8
+		var lines []string
+		inLink := false
+		for _, line := range strings.Split(output, "\n") {
+			if strings.Contains(line, startPlaceholder) {
+				inLink = true
+			}
+			if inLink {
+				// Replace end placeholder if present on this line
+				hasEnd := strings.Contains(line, endPlaceholder)
+				line = strings.ReplaceAll(line, startPlaceholder, osc8Start)
+				if !strings.HasPrefix(line, osc8Start) && !strings.Contains(line, osc8Start) {
+					line = osc8Start + line
+				}
+				if hasEnd {
+					line = strings.ReplaceAll(line, endPlaceholder, osc8End)
+					inLink = false
+				} else {
+					line = line + osc8End
+				}
+			}
+			lines = append(lines, line)
+		}
+		output = strings.Join(lines, "\n")
+	}
 
 	return output, overlays, nil
 }
@@ -199,7 +236,7 @@ func applyInlineStyle(s ComputedStyle, text string) string {
 	return text
 }
 
-func (m Model) renderInline(node *RenderNode, currentX, currentY int, overlays *[]ImageOverlay) string {
+func (m Model) renderInline(node *RenderNode, currentX, currentY int, overlays *[]ImageOverlay, links *[]string) string {
 	if node == nil {
 		return ""
 	}
@@ -218,12 +255,20 @@ func (m Model) renderInline(node *RenderNode, currentX, currentY int, overlays *
 
 	var sb strings.Builder
 	for _, child := range node.Children {
-		sb.WriteString(m.renderInline(child, currentX, currentY, overlays))
+		sb.WriteString(m.renderInline(child, currentX, currentY, overlays, links))
 	}
-	return applyInlineStyle(node.Style, sb.String())
+	content := applyInlineStyle(node.Style, sb.String())
+	if node.Tag == "a" && node.Href != "" && !m.DisableHyperlinks && links != nil {
+		id := len(*links)
+		*links = append(*links, node.Href)
+		startMarker := fmt.Sprintf("\x1b[999000;%dm", id)
+		endMarker := fmt.Sprintf("\x1b[999001;%dm", id)
+		content = startMarker + content + endMarker
+	}
+	return content
 }
 
-func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]ImageOverlay, targetHeight int) string {
+func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]ImageOverlay, targetHeight int, links *[]string) string {
 	if node == nil {
 		return ""
 	}
@@ -286,7 +331,7 @@ func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]
 			renderedItems := make([]string, len(row.children))
 			maxHeight := 0
 			for i, child := range row.children {
-				out := m.renderNode(child, currentX, currentY, overlays, 0)
+				out := m.renderNode(child, currentX, currentY, overlays, 0, links)
 				renderedItems[i] = out
 				if out != "" {
 					h := strings.Count(out, "\n") + 1
@@ -301,7 +346,7 @@ func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]
 			if len(row.children) > 1 && maxHeight > 0 {
 				for _, child := range row.children {
 					// Re-render with target height
-					out := m.renderNode(child, currentX, currentY, overlays, maxHeight)
+					out := m.renderNode(child, currentX, currentY, overlays, maxHeight, links)
 					if out != "" {
 						itemOutputs = append(itemOutputs, out)
 					}
@@ -334,7 +379,7 @@ func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]
 			}
 			var sb strings.Builder
 			for _, inlineNode := range inlineRun {
-				sb.WriteString(m.renderInline(inlineNode, blockX, blockY, overlays))
+				sb.WriteString(m.renderInline(inlineNode, blockX, blockY, overlays, links))
 			}
 			inlineRun = nil
 
@@ -397,7 +442,7 @@ func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]
 						childTargetHeight = 0
 					}
 				}
-				out := m.renderNode(child, blockX, blockY, overlays, childTargetHeight)
+				out := m.renderNode(child, blockX, blockY, overlays, childTargetHeight, links)
 				if out != "" {
 					childOutputs = append(childOutputs, out)
 					blockY += strings.Count(out, "\n") + 1
@@ -407,7 +452,15 @@ func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]
 		flushInlineRun()
 		content = lipgloss.JoinVertical(lipgloss.Left, childOutputs...)
 	}
-	return applyLipglossStyle(node.Style, node.LipglossWidth, targetHeight, content)
+	out := applyLipglossStyle(node.Style, node.LipglossWidth, targetHeight, content)
+	if node.Tag == "a" && node.Href != "" && !m.DisableHyperlinks && links != nil {
+		id := len(*links)
+		*links = append(*links, node.Href)
+		startMarker := fmt.Sprintf("\x1b[999000;%dm", id)
+		endMarker := fmt.Sprintf("\x1b[999001;%dm", id)
+		out = startMarker + out + endMarker
+	}
+	return out
 }
 
 func (m Model) renderImageNode(node *RenderNode, x, y int, overlays *[]ImageOverlay) string {
@@ -443,7 +496,7 @@ func (m Model) renderImageNode(node *RenderNode, x, y int, overlays *[]ImageOver
 	lines := strings.Split(rendered, "\n")
 	imgHeight := len(lines)
 
-	if renderer.Protocol() != termimage.HalfBlock && overlays != nil {
+	if renderer.Protocol().IsGraphic() && overlays != nil {
 		*overlays = append(*overlays, ImageOverlay{
 			Row:    y,
 			Col:    x,
@@ -702,13 +755,13 @@ func boolStr(b bool, str string) string {
 	}
 	return ""
 }
-
 func wrapText(text string, width int) string {
 	if width <= 0 {
 		return text
 	}
 	w := wordwrap.NewWriter(width)
 	w.Breakpoints = []rune{' '}
+	w.KeepNewlines = true
 	_, _ = w.Write([]byte(text))
 	_ = w.Close()
 	out := w.String()
@@ -716,7 +769,24 @@ func wrapText(text string, width int) string {
 	var lines []string
 	for _, line := range strings.Split(out, "\n") {
 		if lipgloss.Width(line) > width {
-			lines = append(lines, wrap.String(line, width))
+			// wrap.String wraps without spaces. We must ensure that each wrapped line starts with the active ANSI sequences.
+			wrappedChunk := wrap.String(line, width)
+			chunkLines := strings.Split(wrappedChunk, "\n")
+			var activeAnsi string
+			for ci, cl := range chunkLines {
+				if ci > 0 && activeAnsi != "" {
+					cl = activeAnsi + cl
+				}
+				// Extract all ANSI escape sequences from cl to track active styles
+				for _, seq := range ansiRegex.FindAllString(cl, -1) {
+					if seq == "\x1b[0m" || seq == "\x1b[m" {
+						activeAnsi = ""
+					} else if strings.HasPrefix(seq, "\x1b[") && !strings.HasPrefix(seq, "\x1b[999") {
+						activeAnsi = seq
+					}
+				}
+				lines = append(lines, cl)
+			}
 		} else {
 			lines = append(lines, line)
 		}
