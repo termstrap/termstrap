@@ -19,8 +19,8 @@ func Detect() Capabilities {
 	profile := output.EnvColorProfile()
 	caps.TrueColor = profile == termenv.TrueColor
 
-	// Detect terminal dimensions
-	caps.ColCount, caps.RowCount = terminalSize()
+	// Detect terminal dimensions and pixel resolution (HiDPI / Retina aware)
+	caps.ColCount, caps.RowCount, caps.TermWidthPx, caps.TermHeightPx, caps.CellWidthPx, caps.CellHeightPx = terminalDimensions()
 
 	// Detect best graphics protocol from environment
 	caps.Protocol = detectFromEnv()
@@ -38,7 +38,7 @@ func Detect() Capabilities {
 //  4. HalfBlock: universal fallback
 //
 // Users can override detection by setting TERMSTRAP_IMAGE_PROTOCOL to one of:
-// kitty, iterm2, sixel, halfblock.
+// kitty, iterm2, sixel, sextant, halfblock.
 func detectFromEnv() Protocol {
 	// User override takes priority
 	if override := os.Getenv("TERMSTRAP_IMAGE_PROTOCOL"); override != "" {
@@ -49,6 +49,8 @@ func detectFromEnv() Protocol {
 			return ITerm2
 		case "sixel":
 			return Sixel
+		case "sextant", "sextants", "block6":
+			return Sextant
 		case "halfblock", "ansi", "block":
 			return HalfBlock
 		}
@@ -87,9 +89,9 @@ func detectFromEnv() Protocol {
 	return HalfBlock
 }
 
-// terminalSize returns the terminal width and height in columns/rows.
+// terminalSizeFallback returns the terminal width and height in columns/rows.
 // Returns (80, 24) as defaults if detection fails.
-func terminalSize() (cols, rows int) {
+func terminalSizeFallback() (cols, rows int) {
 	w, h, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil || w == 0 {
 		return 80, 24

@@ -172,6 +172,19 @@ func EstimateVisualHeight(img image.Image, widthCols int, proto Protocol) int {
 	case HalfBlock:
 		// Each character cell represents 2 vertical pixels (top ▀ + bottom ▄)
 		return (pxHeight + 1) / 2
+	case Sextant:
+		// Each character cell represents 2 horizontal x 3 vertical pixels
+		pxW := widthCols * 2
+		var pxH int
+		if origW > pxW {
+			pxH = int(float64(origH) * float64(pxW) / float64(origW))
+		} else {
+			pxH = origH
+		}
+		if pxH < 1 {
+			pxH = 1
+		}
+		return (pxH + 2) / 3
 	default:
 		// Native protocols render at pixel level; terminal maps to cell rows
 		return (pxHeight + defaultCellHeight - 1) / defaultCellHeight

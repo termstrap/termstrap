@@ -10,7 +10,10 @@ import (
 
 // itermRenderer renders images using the iTerm2 inline image protocol.
 // See: https://iterm2.com/documentation-images.html
-type itermRenderer struct{}
+type itermRenderer struct {
+	cellWidthPx  int
+	cellHeightPx int
+}
 
 func (r *itermRenderer) Protocol() Protocol { return ITerm2 }
 
@@ -19,7 +22,7 @@ func (r *itermRenderer) Protocol() Protocol { return ITerm2 }
 // width in terminal columns.
 func (r *itermRenderer) Render(img image.Image, width int) (string, error) {
 	// Resize to approximate pixel width for the given columns
-	pxWidth := ColsToPixels(width, 0)
+	pxWidth := ColsToPixels(width, r.cellWidthPx)
 	img = ResizeToWidth(img, pxWidth)
 
 	// Encode as PNG
@@ -44,7 +47,7 @@ func (r *itermRenderer) Render(img image.Image, width int) (string, error) {
 // The height parameter is passed to iTerm2 so the terminal fits the image within
 // the specified cell dimensions, preventing overflow in bordered containers.
 func (r *itermRenderer) RenderConstrained(img image.Image, width, height int) (string, error) {
-	pxWidth := ColsToPixels(width, 0)
+	pxWidth := ColsToPixels(width, r.cellWidthPx)
 	img = ResizeToWidth(img, pxWidth)
 
 	var buf bytes.Buffer

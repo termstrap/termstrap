@@ -6,7 +6,8 @@
 //  1. Kitty Graphics Protocol (GPU-accelerated, pixel-perfect)
 //  2. iTerm2 Inline Images (Base64 PNG via OSC 1337)
 //  3. Sixel Graphics (for compatible terminals like foot, mlterm, xterm)
-//  4. ANSI Half-Block (Unicode ▄/▀ with TrueColor — universal fallback)
+//  4. Sextants (Unicode 13.0 2x3 block sextants — 6 sub-pixels per cell)
+//  5. ANSI Half-Block (Unicode ▄/▀ with TrueColor — universal fallback)
 package image
 
 import (
@@ -28,6 +29,8 @@ const (
 	ITerm2
 	// Kitty renders images using the Kitty graphics protocol (APC sequences).
 	Kitty
+	// Sextant renders images using Unicode 13.0 2x3 block sextants (6 sub-pixels per cell).
+	Sextant
 )
 
 // String returns the human-readable name of the protocol.
@@ -39,11 +42,19 @@ func (p Protocol) String() string {
 		return "iterm2"
 	case Sixel:
 		return "sixel"
+	case Sextant:
+		return "sextant"
 	case HalfBlock:
 		return "halfblock"
 	default:
 		return "unknown"
 	}
+}
+
+// IsGraphic reports whether the protocol renders as a pixel graphic overlay
+// (Kitty, iTerm2, Sixel) rather than text character cells (HalfBlock, Sextant).
+func (p Protocol) IsGraphic() bool {
+	return p == Kitty || p == ITerm2 || p == Sixel
 }
 
 // Capabilities holds the detected terminal graphics capabilities.
@@ -88,6 +99,9 @@ type options struct {
 	capabilities *Capabilities
 	colorMode    ColorMode
 	optimize     bool
+	dither       bool
+	cellWidthPx  int
+	cellHeightPx int
 }
 
 // WithProtocol forces a specific graphics protocol instead of auto-detecting.
@@ -97,7 +111,7 @@ func WithProtocol(p Protocol) Option {
 	}
 }
 
-// WithColorMode specifies the color depth (TrueColor, 256 colors, 16 colors) for half-block rendering.
+// WithColorMode specifies the color depth (TrueColor, 256 colors, 16 colors) for half-block and sextant rendering.
 func WithColorMode(cm ColorMode) Option {
 	return func(o *options) {
 		o.colorMode = cm
@@ -108,6 +122,21 @@ func WithColorMode(cm ColorMode) Option {
 func WithOptimizeSequences(opt bool) Option {
 	return func(o *options) {
 		o.optimize = opt
+	}
+}
+
+// WithDither enables or disables Floyd-Steinberg error diffusion dithering for quantized color modes.
+func WithDither(dither bool) Option {
+	return func(o *options) {
+		o.dither = dither
+	}
+}
+
+// WithCellSize explicitly configures the physical cell width and height in pixels (for HiDPI scaling).
+func WithCellSize(cellWidthPx, cellHeightPx int) Option {
+	return func(o *options) {
+		o.cellWidthPx = cellWidthPx
+		o.cellHeightPx = cellHeightPx
 	}
 }
 
@@ -133,29 +162,45 @@ func NewRenderer(opts ...Option) Renderer {
 		output:    os.Stdout,
 		colorMode: ColorModeTrueColor,
 		optimize:  true,
+		dither:    true,
 	}
 	for _, opt := range opts {
 		opt(o)
 	}
 
+	var caps Capabilities
 	var proto Protocol
+	if o.capabilities != nil {
+		caps = *o.capabilities
+		proto = caps.Protocol
+	} else {
+		caps = Detect()
+		proto = caps.Protocol
+	}
+
 	if o.protocol != nil {
 		proto = *o.protocol
-	} else if o.capabilities != nil {
-		proto = o.capabilities.Protocol
-	} else {
-		caps := Detect()
-		proto = caps.Protocol
+	}
+
+	cellW := o.cellWidthPx
+	cellH := o.cellHeightPx
+	if cellW <= 0 && caps.CellWidthPx > 0 {
+		cellW = caps.CellWidthPx
+	}
+	if cellH <= 0 && caps.CellHeightPx > 0 {
+		cellH = caps.CellHeightPx
 	}
 
 	switch proto {
 	case Kitty:
-		return &kittyRenderer{}
+		return &kittyRenderer{cellWidthPx: cellW, cellHeightPx: cellH}
 	case ITerm2:
-		return &itermRenderer{}
+		return &itermRenderer{cellWidthPx: cellW, cellHeightPx: cellH}
 	case Sixel:
-		return &sixelRenderer{}
+		return &sixelRenderer{cellWidthPx: cellW, cellHeightPx: cellH, dither: o.dither}
+	case Sextant:
+		return NewSextantRenderer(o.colorMode, o.optimize, o.dither)
 	default:
-		return NewHalfBlockRenderer(o.colorMode, o.optimize)
+		return NewHalfBlockRenderer(o.colorMode, o.optimize, o.dither)
 	}
 }

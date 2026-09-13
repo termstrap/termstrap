@@ -11,13 +11,19 @@ import (
 type halfBlockRenderer struct {
 	colorMode ColorMode
 	optimize  bool
+	dither    bool
 }
 
 // NewHalfBlockRenderer creates a new half-block renderer with specified options.
-func NewHalfBlockRenderer(colorMode ColorMode, optimize bool) Renderer {
+func NewHalfBlockRenderer(colorMode ColorMode, optimize bool, dither ...bool) Renderer {
+	d := false
+	if len(dither) > 0 {
+		d = dither[0]
+	}
 	return &halfBlockRenderer{
 		colorMode: colorMode,
 		optimize:  optimize,
+		dither:    d,
 	}
 }
 
@@ -33,6 +39,9 @@ func (r *halfBlockRenderer) Render(img image.Image, width int) (string, error) {
 	}
 
 	scaled := ResizeToWidth(img, width)
+	if r.dither && r.colorMode != ColorModeTrueColor {
+		scaled = FloydSteinbergDither(scaled, r.colorMode)
+	}
 	return r.renderScaled(scaled)
 }
 
@@ -47,6 +56,9 @@ func (r *halfBlockRenderer) RenderConstrained(img image.Image, width, height int
 
 	// Each character row holds 2 vertical pixels
 	scaled := ResizeToFit(img, width, height*2)
+	if r.dither && r.colorMode != ColorModeTrueColor {
+		scaled = FloydSteinbergDither(scaled, r.colorMode)
+	}
 	return r.renderScaled(scaled)
 }
 

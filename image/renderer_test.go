@@ -26,6 +26,7 @@ func TestProtocolString(t *testing.T) {
 		{Kitty, "kitty"},
 		{ITerm2, "iterm2"},
 		{Sixel, "sixel"},
+		{Sextant, "sextant"},
 		{HalfBlock, "halfblock"},
 		{Protocol(99), "unknown"},
 	}
@@ -33,6 +34,24 @@ func TestProtocolString(t *testing.T) {
 		if got := tt.proto.String(); got != tt.want {
 			t.Errorf("Protocol(%d).String() = %q, want %q", tt.proto, got, tt.want)
 		}
+	}
+}
+
+func TestProtocolIsGraphic(t *testing.T) {
+	if !Kitty.IsGraphic() {
+		t.Error("Kitty should be graphic")
+	}
+	if !ITerm2.IsGraphic() {
+		t.Error("ITerm2 should be graphic")
+	}
+	if !Sixel.IsGraphic() {
+		t.Error("Sixel should be graphic")
+	}
+	if HalfBlock.IsGraphic() {
+		t.Error("HalfBlock should not be graphic")
+	}
+	if Sextant.IsGraphic() {
+		t.Error("Sextant should not be graphic")
 	}
 }
 
@@ -56,6 +75,11 @@ func TestDetectFromEnv(t *testing.T) {
 			name:     "override sixel",
 			env:      map[string]string{"TERMSTRAP_IMAGE_PROTOCOL": "sixel"},
 			expected: Sixel,
+		},
+		{
+			name:     "override sextant",
+			env:      map[string]string{"TERMSTRAP_IMAGE_PROTOCOL": "sextant"},
+			expected: Sextant,
 		},
 		{
 			name:     "override halfblock",
@@ -288,6 +312,42 @@ func TestHalfBlockRender(t *testing.T) {
 	}
 }
 
+func TestSextantRender(t *testing.T) {
+	img := newTestImage(8, 8, color.RGBA{200, 100, 50, 255})
+	r := NewSextantRenderer(ColorModeTrueColor, true)
+
+	result, err := r.Render(img, 10)
+	if err != nil {
+		t.Fatalf("sextantRenderer.Render() error: %v", err)
+	}
+
+	if !strings.Contains(result, "\x1b[") {
+		t.Error("sextant output should contain ANSI escape codes")
+	}
+
+	if r.Protocol() != Sextant {
+		t.Errorf("Protocol() = %v, want Sextant", r.Protocol())
+	}
+}
+
+func TestSextantRender_Constrained(t *testing.T) {
+	img := newTestImage(20, 20, color.RGBA{100, 150, 200, 255})
+	r, ok := NewSextantRenderer(ColorModeTrueColor, true).(ConstrainedRenderer)
+	if !ok {
+		t.Fatalf("sextantRenderer should implement ConstrainedRenderer")
+	}
+
+	result, err := r.RenderConstrained(img, 5, 5)
+	if err != nil {
+		t.Fatalf("RenderConstrained error: %v", err)
+	}
+
+	lines := strings.Split(result, "\n")
+	if len(lines) > 5 {
+		t.Errorf("RenderConstrained height = %d lines, want <= 5", len(lines))
+	}
+}
+
 func TestNewRendererWithProtocol(t *testing.T) {
 	tests := []struct {
 		proto Protocol
@@ -296,6 +356,7 @@ func TestNewRendererWithProtocol(t *testing.T) {
 		{Kitty, Kitty},
 		{ITerm2, ITerm2},
 		{Sixel, Sixel},
+		{Sextant, Sextant},
 		{HalfBlock, HalfBlock},
 	}
 	for _, tt := range tests {
@@ -383,5 +444,63 @@ func TestSplitPayload(t *testing.T) {
 		if rejoined != tt.input {
 			t.Errorf("splitPayload chunks don't rejoin: got %q, want %q", rejoined, tt.input)
 		}
+	}
+}
+
+func TestFloydSteinbergDither(t *testing.T) {
+	img := newTestImage(10, 10, color.RGBA{123, 45, 67, 255})
+
+	// TrueColor returns copy
+	ditheredTC := FloydSteinbergDither(img, ColorModeTrueColor)
+	if ditheredTC.Bounds() != img.Bounds() {
+		t.Errorf("FloydSteinbergDither TrueColor bounds mismatch")
+	}
+
+	// 256 colors
+	dithered256 := FloydSteinbergDither(img, ColorMode256)
+	if dithered256.Bounds().Dx() != 10 || dithered256.Bounds().Dy() != 10 {
+		t.Errorf("FloydSteinbergDither 256 bounds mismatch")
+	}
+
+	// 16 colors
+	dithered16 := FloydSteinbergDither(img, ColorMode16)
+	if dithered16.Bounds().Dx() != 10 || dithered16.Bounds().Dy() != 10 {
+		t.Errorf("FloydSteinbergDither 16 bounds mismatch")
+	}
+}
+
+func TestWithCellSize(t *testing.T) {
+	img := newTestImage(100, 100, color.RGBA{255, 0, 0, 255})
+	r := NewRenderer(WithProtocol(Kitty), WithCellSize(16, 32))
+	res, err := r.Render(img, 10)
+	if err != nil {
+		t.Fatalf("Render with custom cell size failed: %v", err)
+	}
+	if !strings.HasPrefix(res, "\x1b_G") {
+		t.Errorf("expected Kitty sequence with custom cell size")
+	}
+}
+
+func TestPaletteConversions(t *testing.T) {
+	// Test standard 16 colors
+	for i := uint8(0); i < 16; i++ {
+		r, g, b := Palette16ToRGB(i)
+		if r == 0 && g == 0 && b == 0 && i != 0 {
+			t.Errorf("Palette16ToRGB(%d) returned unexpected all-zero", i)
+		}
+	}
+
+	// Test 256 colors
+	r, g, b := Palette256ToRGB(16) // black
+	if r != 0 || g != 0 || b != 0 {
+		t.Errorf("Palette256ToRGB(16) = (%d,%d,%d), want (0,0,0)", r, g, b)
+	}
+	r, g, b = Palette256ToRGB(231) // white
+	if r != 255 || g != 255 || b != 255 {
+		t.Errorf("Palette256ToRGB(231) = (%d,%d,%d), want (255,255,255)", r, g, b)
+	}
+	r, g, b = Palette256ToRGB(240) // grayscale
+	if r != g || g != b {
+		t.Errorf("Palette256ToRGB(240) expected gray, got (%d,%d,%d)", r, g, b)
 	}
 }

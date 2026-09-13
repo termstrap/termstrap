@@ -10,16 +10,18 @@ import (
 
 // kittyRenderer renders images using the Kitty graphics protocol.
 // See: https://sw.kovidgoyal.net/kitty/graphics-protocol/
-type kittyRenderer struct{}
+type kittyRenderer struct {
+	cellWidthPx  int
+	cellHeightPx int
+}
 
 func (r *kittyRenderer) Protocol() Protocol { return Kitty }
 
 // Render encodes the image as PNG, base64-encodes it, and emits Kitty APC
-// graphics sequences. The image is resized to fit the given column width
-// (assuming 8px per cell if cell dimensions are unknown).
+// graphics sequences. The image is resized to fit the given column width.
 func (r *kittyRenderer) Render(img image.Image, width int) (string, error) {
 	// Resize to approximate pixel width for the given columns
-	pxWidth := ColsToPixels(width, 0)
+	pxWidth := ColsToPixels(width, r.cellWidthPx)
 	img = ResizeToWidth(img, pxWidth)
 
 	// Encode as PNG
@@ -39,7 +41,7 @@ func (r *kittyRenderer) Render(img image.Image, width int) (string, error) {
 // The c= and r= placement parameters tell Kitty to fit the image within the
 // specified cell dimensions.
 func (r *kittyRenderer) RenderConstrained(img image.Image, width, height int) (string, error) {
-	pxWidth := ColsToPixels(width, 0)
+	pxWidth := ColsToPixels(width, r.cellWidthPx)
 	img = ResizeToWidth(img, pxWidth)
 
 	var buf bytes.Buffer

@@ -117,3 +117,49 @@ func RGBTo16(r, g, b uint8) uint8 {
 	}
 	return uint8(idx)
 }
+
+var cubeSteps = [6]uint8{0, 95, 135, 175, 215, 255}
+
+var standard16Colors = [16][3]uint8{
+	{0, 0, 0},       // 0: black
+	{128, 0, 0},     // 1: red
+	{0, 128, 0},     // 2: green
+	{128, 128, 0},   // 3: yellow
+	{0, 0, 128},     // 4: blue
+	{128, 0, 128},   // 5: magenta
+	{0, 128, 128},   // 6: cyan
+	{192, 192, 192}, // 7: light gray
+	{128, 128, 128}, // 8: dark gray
+	{255, 0, 0},     // 9: bright red
+	{0, 255, 0},     // 10: bright green
+	{255, 255, 0},   // 11: bright yellow
+	{0, 0, 255},     // 12: bright blue
+	{255, 0, 255},   // 13: bright magenta
+	{0, 255, 255},   // 14: bright cyan
+	{255, 255, 255}, // 15: bright white
+}
+
+// Palette256ToRGB converts an xterm 256-color index to its corresponding RGB values.
+func Palette256ToRGB(idx uint8) (r, g, b uint8) {
+	if idx < 16 {
+		c := standard16Colors[idx]
+		return c[0], c[1], c[2]
+	}
+	if idx >= 232 {
+		// Grayscale ramp: 24 steps from 8 to 238
+		gray := uint8(8 + 10*int(idx-232))
+		return gray, gray, gray
+	}
+	// 6x6x6 color cube: indices 16..231
+	cube := idx - 16
+	rIdx := cube / 36
+	gIdx := (cube % 36) / 6
+	bIdx := cube % 6
+	return cubeSteps[rIdx], cubeSteps[gIdx], cubeSteps[bIdx]
+}
+
+// Palette16ToRGB converts an ANSI 16-color index to its corresponding RGB values.
+func Palette16ToRGB(idx uint8) (r, g, b uint8) {
+	c := standard16Colors[idx%16]
+	return c[0], c[1], c[2]
+}
