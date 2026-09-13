@@ -3,6 +3,7 @@ package termstrap
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/go-scripts/termstrap/testutil"
@@ -17,7 +18,7 @@ func TestE2E_ResponsiveStackingVsSideBySide(t *testing.T) {
 
 	htmlStr := string(content)
 
-	t.Run("Stacked at width 70 (below col-md 80 breakpoint)", func(t *testing.T) {
+	t.Run("Stacked at width 70 (below col-md 100 breakpoint)", func(t *testing.T) {
 		m := New(htmlStr, WithWidth(70), WithDisableImages(true))
 		out, err := m.Render()
 		if err != nil {
@@ -29,7 +30,7 @@ func TestE2E_ResponsiveStackingVsSideBySide(t *testing.T) {
 		// Title at top (container p-2 -> x=2, y=0)
 		screen.AssertText(t, 2, 0, "80s Huge Hits FLAC 2026")
 
-		// Below width 80 (md breakpoint), col-md-6 columns stack vertically at full container width (66 cols: [2..67]).
+		// Below width 100 (md breakpoint), col-md-6 columns stack vertically at full container width (66 cols: [2..67]).
 		// First column (Cover & metadata table) starts at y=2, height=13
 		screen.AssertBorderBox(t, 2, 2, 66, 13)
 		screen.AssertText(t, 6, 8, "Catégorie")
@@ -47,7 +48,7 @@ func TestE2E_ResponsiveStackingVsSideBySide(t *testing.T) {
 		screen.AssertText(t, 5, 17, "Description")
 		screen.AssertText(t, 8, 19, "• A-Ha - Take On Me [03:48]")
 	})
-	t.Run("Side-by-Side at width 120 (above col-md 80 breakpoint)", func(t *testing.T) {
+	t.Run("Side-by-Side at width 120 (above col-md 100 breakpoint)", func(t *testing.T) {
 		m := New(htmlStr, WithWidth(120), WithDisableImages(true))
 		out, err := m.Render()
 		if err != nil {
@@ -59,7 +60,7 @@ func TestE2E_ResponsiveStackingVsSideBySide(t *testing.T) {
 		// Title at top
 		screen.AssertText(t, 2, 0, "80s Huge Hits FLAC 2026")
 
-		// At width 120, col-md-6 divides space into two 58-col columns side-by-side:
+		// At width 120 (above md 100), col-md-6 divides space into two 58-col columns side-by-side:
 		// Left column: x in [2, 59] (width 58, height 13)
 		// Right column: x in [60, 117] (width 58, height 68)
 		// Both top corners must be on the exact same row (y=2)
@@ -240,4 +241,39 @@ func TestE2E_NestedCardsAndBorders(t *testing.T) {
 	screen.AssertChar(t, 19, 2, '╮')
 	screen.AssertChar(t, 20, 2, '╭')
 	screen.AssertChar(t, 37, 2, '╮')
+}
+
+func TestE2E_Hyperlinks(t *testing.T) {
+	html := `<div class="p-1 border rounded">
+		<h1>Resources</h1>
+		<p>Check the <a href="https://github.com/go-scripts/termstrap">Official Repo</a> or <a href="https://pkg.go.dev">Go Docs</a>.</p>
+	</div>`
+
+	m := New(html, WithWidth(80))
+	out, err := m.Render()
+	if err != nil {
+		t.Fatalf("Render failed: %v", err)
+	}
+
+	testutil.ShowInteractive(t, "Hyperlinks in Card", out)
+	screen := testutil.NewScreen(80, 0, out)
+
+	// Border box is rendered
+	screen.AssertChar(t, 0, 0, '╭')
+	screen.AssertText(t, 2, 1, "Resources")
+	screen.AssertText(t, 2, 3, "Check the Official Repo or Go Docs.")
+
+	// Verify OSC 8 sequence presence in the raw terminal output
+	expectedRepo := "\x1b]8;id=link_0;https://github.com/go-scripts/termstrap\x1b\\"
+	expectedDocs := "\x1b]8;id=link_1;https://pkg.go.dev\x1b\\"
+	expectedEnd := "\x1b]8;;\x1b\\"
+	if !strings.Contains(out, expectedRepo) {
+		t.Errorf("Expected raw output to contain repo hyperlink %q", expectedRepo)
+	}
+	if !strings.Contains(out, expectedDocs) {
+		t.Errorf("Expected raw output to contain docs hyperlink %q", expectedDocs)
+	}
+	if !strings.Contains(out, expectedEnd) {
+		t.Errorf("Expected raw output to contain hyperlink terminator %q", expectedEnd)
+	}
 }

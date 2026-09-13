@@ -11,8 +11,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/go-scripts/termstrap/testutil"
+	"github.com/muesli/termenv"
 )
-
 func TestEngine_SimpleDivAndMargins(t *testing.T) {
 	html := `<div class="m-3 p-2 bg-dark text-white">Hello Termstrap</div>`
 	m := New(html, WithWidth(80))
@@ -416,3 +416,43 @@ func TestEngine_CascadeInheritance_UnsetAndOverride(t *testing.T) {
 	}
 }
 
+
+func TestEngine_OSC8Hyperlinks(t *testing.T) {
+	html := `<p>Visit <a href="https://example.com">Example Site</a> today!</p>`
+	m := New(html, WithWidth(80))
+	out, err := m.Render()
+	if err != nil {
+		t.Fatalf("Render failed: %v", err)
+	}
+
+	expectedOSC := "\x1b]8;id=link_0;https://example.com\x1b\\"
+	if !strings.Contains(out, expectedOSC) {
+		t.Errorf("Expected output to contain OSC 8 sequence %q, got:\n%q", expectedOSC, out)
+	}
+
+	// Test disabling hyperlinks
+	mDisabled := New(html, WithWidth(80), WithDisableHyperlinks(true))
+	outDisabled, err := mDisabled.Render()
+	if err != nil {
+		t.Fatalf("Render failed: %v", err)
+	}
+	if strings.Contains(outDisabled, expectedOSC) {
+		t.Errorf("Expected disabled hyperlinks output not to contain OSC 8, got:\n%q", outDisabled)
+	}
+}
+
+func TestEngine_WrappedLinkColor(t *testing.T) {
+	lipgloss.SetColorProfile(termenv.TrueColor)
+	html := `<div style="width: 30px;"><a class="text-success" href="https://example.com/very/long/url/that/will/definitely/wrap/across/several/lines/without/any/spaces/whatsoever">https://example.com/very/long/url/that/will/definitely/wrap/across/several/lines/without/any/spaces/whatsoever</a></div>`
+	m := New(html, WithWidth(30))
+	out, err := m.Render()
+	if err != nil {
+		t.Fatalf("Render failed: %v", err)
+	}
+	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	for i, l := range lines {
+		if !strings.Contains(l, "\x1b[4;38;2;25;135;84;4m") && !strings.Contains(l, "\x1b[38;2;25;135;84m") {
+			t.Errorf("Line %d expected ANSI green color escape code, got: %q", i, l)
+		}
+	}
+}

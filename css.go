@@ -25,22 +25,25 @@ const (
 type Breakpoint int
 
 const (
-	bpXS Breakpoint = iota // < 60
-	bpSM                   // >= 60
-	bpMD                   // >= 80
-	bpLG                   // >= 120
+	bpXS  Breakpoint = iota // < 70
+	bpSM                   // >= 70
+	bpMD                   // >= 100
+	bpLG                   // >= 130
 	bpXL                   // >= 160
+	bpXXL                  // >= 190
 )
 
 func detectBreakpoint(width int) Breakpoint {
 	switch {
+	case width >= 190:
+		return bpXXL
 	case width >= 160:
 		return bpXL
-	case width >= 120:
+	case width >= 130:
 		return bpLG
-	case width >= 80:
+	case width >= 100:
 		return bpMD
-	case width >= 60:
+	case width >= 70:
 		return bpSM
 	default:
 		return bpXS
@@ -268,6 +271,8 @@ func resolveColSpanResponsive(classes []string, currentBP Breakpoint) (int, bool
 			bpPrefix := parts[1]
 			var bp Breakpoint
 			switch bpPrefix {
+			case "xs":
+				bp = bpXS
 			case "sm":
 				bp = bpSM
 			case "md":
@@ -276,6 +281,8 @@ func resolveColSpanResponsive(classes []string, currentBP Breakpoint) (int, bool
 				bp = bpLG
 			case "xl":
 				bp = bpXL
+			case "xxl":
+				bp = bpXXL
 			default:
 				continue
 			}
@@ -328,6 +335,8 @@ func resolveRowColsResponsive(classes []string, currentBP Breakpoint) int {
 			bpPrefix := parts[2]
 			var bp Breakpoint
 			switch bpPrefix {
+			case "xs":
+				bp = bpXS
 			case "sm":
 				bp = bpSM
 			case "md":
@@ -336,6 +345,8 @@ func resolveRowColsResponsive(classes []string, currentBP Breakpoint) int {
 				bp = bpLG
 			case "xl":
 				bp = bpXL
+			case "xxl":
+				bp = bpXXL
 			default:
 				continue
 			}

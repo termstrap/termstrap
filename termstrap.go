@@ -92,3 +92,10 @@ func WithDisableImages(disable bool) Option {
 	}
 }
 
+// WithDisableHyperlinks disables emitting OSC 8 ANSI hyperlinks for <a> tags.
+func WithDisableHyperlinks(disable bool) Option {
+	return func(m *Model) {
+		m.DisableHyperlinks = disable
+	}
+}
+

@@ -28,6 +28,10 @@ img {
   display: inline;
 }
 
+a {
+  text-decoration: underline;
+}
+
 strong,
 b {
   font-weight: bold;

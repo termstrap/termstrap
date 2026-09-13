@@ -23,9 +23,9 @@ type RenderNode struct {
 	Text     string
 	Src      string
 	Alt      string
+	Href     string // URL for <a> tags
 	Style    ComputedStyle
 	Children []*RenderNode
-
 	// Layout Geometry (calculated in character cells)
 	AllocatedWidth int // Parent allocated width
 	BoxWidth       int // Width between outer border edges (AllocatedWidth - Margins - Shadow)
@@ -105,6 +105,10 @@ func BuildRenderTree(sel *goquery.Selection, matcher *CSSMatcher, termWidth int,
 		Type:  NodeElement,
 		Tag:   tag,
 		Style: style,
+	}
+
+	if href, ok := sel.Attr("href"); ok {
+		rNode.Href = href
 	}
 
 	if tag == "img" {
