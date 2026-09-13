@@ -38,7 +38,7 @@ func main() {
 	flag.StringVar(&rootPathFlag, "r", "", "Root directory for resolving local images (shorthand)")
 	flag.StringVar(&colorModeFlag, "color", "", "Color mode (truecolor, 256, 16)")
 	flag.StringVar(&colorModeFlag, "c", "", "Color mode (shorthand)")
-	flag.StringVar(&protocolFlag, "protocol", "", "Force image protocol (halfblock, kitty, iterm, sixel)")
+	flag.StringVar(&protocolFlag, "protocol", "", "Force image protocol (halfblock, sextant, kitty, iterm, sixel)")
 	flag.StringVar(&protocolFlag, "p", "", "Force image protocol (shorthand)")
 	flag.StringVar(&cssFileFlag, "css", "", "Path to custom CSS stylesheet file")
 	flag.BoolVar(&disableImgFlag, "no-images", false, "Disable image rendering and replace with text placeholders")
@@ -161,9 +161,11 @@ func main() {
 
 		var imgOpts []termimage.Option
 		if protocolFlag != "" {
-			switch protocolFlag {
-			case "halfblock":
+			switch strings.ToLower(protocolFlag) {
+			case "halfblock", "ansi":
 				imgOpts = append(imgOpts, termimage.WithProtocol(termimage.HalfBlock))
+			case "sextant", "sextants", "block6":
+				imgOpts = append(imgOpts, termimage.WithProtocol(termimage.Sextant))
 			case "kitty":
 				imgOpts = append(imgOpts, termimage.WithProtocol(termimage.Kitty))
 			case "iterm", "iterm2":
