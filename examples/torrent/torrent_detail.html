@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <style>
+    /* ==========================================================================
+       Tokyo Night Palette & Custom CSS for Termstrap TUI Render
+       ========================================================================== */
+    :root {
+      background-color: #1a1b26;
+      color: #a9b1d6;
+    }
+
+    /* Container Box & Cards */
+    .card-detail {
+      background-color: #1f2335;
+      color: #c0caf5;
+      border: 1px solid #3b4261;
+      border-radius: rounded;
+      box-shadow: 2;
+      padding: 1 2;
+      margin-bottom: 1;
+    }
+
+    .header-banner {
+      background-color: #24283b;
+      color: #7aa2f7;
+      border-bottom: 1px solid #414868;
+      padding: 1 2;
+      margin-bottom: 1;
+    }
+
+    /* Tokyo Night Badges & Accents */
+    .badge-rating {
+      background-color: #e0af68;
+      color: #1a1b26;
+      font-weight: bold;
+      padding: 0 1;
+      border-radius: rounded;
+    }
+
+    .badge-genre {
+      background-color: #bb9af7;
+      color: #1a1b26;
+      font-weight: bold;
+      padding: 0 1;
+      border-radius: rounded;
+      margin-right: 1;
+    }
+
+    .badge-seeders {
+      background-color: #9ece6a;
+      color: #1a1b26;
+      font-weight: bold;
+      padding: 0 1;
+      border-radius: rounded;
+    }
+
+    .badge-leechers {
+      background-color: #f7768e;
+      color: #1a1b26;
+      font-weight: bold;
+      padding: 0 1;
+      border-radius: rounded;
+    }
+
+    .badge-size {
+      background-color: #7dcfff;
+      color: #1a1b26;
+      font-weight: bold;
+      padding: 0 1;
+      border-radius: rounded;
+    }
+
+    /* Table Styles */
+    .table-meta {
+      width: 100%;
+      margin: 1 0;
+    }
+
+    .table-meta th {
+      color: #7aa2f7;
+      border-bottom: 1px solid #3b4261;
+      font-weight: bold;
+      padding: 0 1;
+    }
+
+    .table-meta td {
+      color: #a9b1d6;
+      padding: 0 1;
+    }
+
+    .info-label {
+      color: #565f89;
+      font-weight: bold;
+    }
+
+    .magnet-box {
+      background-color: #16161e;
+      color: #2ac3de;
+      border: 1px solid #292e42;
+      border-radius: rounded;
+      padding: 1;
+      margin-top: 1;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Hero & Title -->
+  <div class="header-banner">
+    <div class="row">
+      <div class="col-sm-12 col-md-8">
+        <h1>🎬 {{ .Title }}</h1>
+        <p class="info-label">
+          Catégorie: <span class="text-white">{{ .Category }}</span>
+          {{ if .SubCategory }} / <span class="text-info">{{ .SubCategory }}</span>{{ end }}
+          {{ if .PublishDate }} | Date: <span class="text-muted">{{ .PublishDate.Format "02/01/2006" }}</span>{{ end }}
+        </p>
+      </div>
+      <div class="col-sm-12 col-md-4 text-end">
+        {{ if gt .Rating 0.0 }}
+        <span class="badge-rating">★ {{ printf "%.1f" .Rating }} / 10</span>
+        {{ end }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Grid (Responsive 2 Columns) -->
+  <div class="row">
+
+    <!-- Left Column: Poster Image + Quick Stats -->
+    <div class="col-sm-12 col-md-4">
+      <div class="card-detail text-center">
+        {{ if .PosterURL }}
+        <img src="{{ .PosterURL }}" alt="{{ .Title }}" width="32" class="rounded mb-1" />
+        {{ else }}
+        <div class="p-3 bg-dark text-muted border rounded mb-1">
+          [ Pas d'affiche disponible ]
+        </div>
+        {{ end }}
+
+        <hr />
+
+        <div class="p-1">
+          <p>
+            <span class="badge-seeders">▲ {{ .Seeders }} Seeds</span>
+            <span class="badge-leechers">▼ {{ .Leechers }} Leechs</span>
+          </p>
+          <p class="mt-1">
+            <span class="badge-size">💾 {{ .FormattedSize }}</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Details, TMDB Genres & Plot -->
+    <div class="col-sm-12 col-md-8">
+      
+      <!-- Genres Bar -->
+      {{ if .Genres }}
+      <div class="mb-1">
+        {{ range .Genres }}
+        <span class="badge-genre">{{ . }}</span>
+        {{ end }}
+      </div>
+      {{ end }}
+
+      <!-- Synopsis / Plot -->
+      <div class="card-detail">
+        <h3>📖 Synopsis</h3>
+        {{ if .Description }}
+        <p>{{ .Description }}</p>
+        {{ else }}
+        <p class="text-muted fst-italic">Aucune description disponible pour ce média.</p>
+        {{ end }}
+      </div>
+
+      <!-- Metadata Table -->
+      <div class="card-detail">
+        <h3>📋 Métadonnées Techniques</h3>
+        <table class="table-meta">
+          <tr>
+            <th>Propriété</th>
+            <th>Valeur</th>
+          </tr>
+          <tr>
+            <td class="info-label">Info Hash:</td>
+            <td><code>{{ .InfoHash }}</code></td>
+          </tr>
+          <tr>
+            <td class="info-label">Source ID:</td>
+            <td>{{ .SourceID }}</td>
+          </tr>
+          {{ if .DetailsURL }}
+          <tr>
+            <td class="info-label">Source URL:</td>
+            <td><a href="{{ .DetailsURL }}">{{ .DetailsURL }}</a></td>
+          </tr>
+          {{ end }}
+        </table>
+      </div>
+
+      <!-- Magnet URI Box -->
+      {{ if .MagnetURI }}
+      <div class="magnet-box">
+        <p><strong>🧲 Magnet Link:</strong></p>
+        <p><code>{{ .MagnetURI }}</code></p>
+      </div>
+      {{ end }}
+
+    </div>
+  </div>
+
+</body>
+</html>
