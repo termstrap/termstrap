@@ -1,6 +1,7 @@
 package termstrap
 
 import (
+	"math"
 	"strconv"
 	"strings"
 
@@ -108,7 +109,8 @@ type CSSRule struct {
 
 // CSSMatcher compiles stylesheets into fast matchable rules.
 type CSSMatcher struct {
-	Rules []CSSRule
+	Rules        []CSSRule
+	Preprocessor *CSSPreprocessor
 }
 
 // NewCSSMatcher parses one or more CSS stylesheets into a CSSMatcher using the specified theme.
@@ -139,6 +141,10 @@ func NewCSSMatcher(theme Theme, stylesheets ...string) (*CSSMatcher, error) {
 
 	// 4. Custom stylesheets
 	allCSS = append(allCSS, stylesheets...)
+
+	preproc := NewCSSPreprocessor(theme)
+	var parsedSheets []*css.Stylesheet
+
 	for _, sheetContent := range allCSS {
 		if strings.TrimSpace(sheetContent) == "" {
 			continue
@@ -147,19 +153,34 @@ func NewCSSMatcher(theme Theme, stylesheets ...string) (*CSSMatcher, error) {
 		if err != nil {
 			continue
 		}
+		parsedSheets = append(parsedSheets, sheet)
+		preproc.ExtractVariables(sheet)
+	}
 
-		for _, rule := range sheet.Rules {
-			for _, sel := range rule.Selectors {
-				compiled, err := cascadia.Compile(sel)
-				if err != nil {
-					continue
-				}
-				matcher.Rules = append(matcher.Rules, CSSRule{
-					Selector: sel,
-					Compiled: compiled,
-					Decls:    rule.Declarations,
-				})
+	matcher.Preprocessor = preproc
+
+	var addRule func(rule *css.Rule)
+	addRule = func(rule *css.Rule) {
+		for _, sel := range rule.Selectors {
+			compiled, err := cascadia.Compile(sel)
+			if err != nil {
+				continue
 			}
+			matcher.Rules = append(matcher.Rules, CSSRule{
+				Selector: sel,
+				Compiled: compiled,
+				Decls:    rule.Declarations,
+			})
+		}
+		for _, child := range rule.Rules {
+			addRule(child)
+		}
+	}
+
+	for _, sheet := range parsedSheets {
+		preproc.PreprocessSheet(sheet)
+		for _, rule := range sheet.Rules {
+			addRule(rule)
 		}
 	}
 
@@ -199,6 +220,9 @@ func (m *CSSMatcher) ComputeStyleForSelection(sel *goquery.Selection, termWidth 
 	if inlineStyle, ok := sel.Attr("style"); ok && inlineStyle != "" {
 		decls, err := parser.ParseDeclarations(inlineStyle)
 		if err == nil {
+			if m.Preprocessor != nil {
+				m.Preprocessor.PreprocessDeclarations(decls)
+			}
 			for _, decl := range decls {
 				applyDeclaration(&s, decl)
 			}
@@ -410,6 +434,11 @@ func applyDeclaration(s *ComputedStyle, decl *css.Declaration) {
 		if val == "true" || val == "1" || strings.Contains(val, "solid") || strings.Contains(val, "1px") {
 			s.Border = true
 		}
+		for _, part := range strings.Fields(val) {
+			if strings.HasPrefix(part, "#") && len(part) >= 4 {
+				s.BorderColor = part
+			}
+		}
 	case "border-top":
 		s.BorderTop = val == "true" || val == "1" || strings.Contains(val, "solid")
 	case "border-bottom":
@@ -419,8 +448,7 @@ func applyDeclaration(s *ComputedStyle, decl *css.Declaration) {
 	case "border-right":
 		s.BorderRight = val == "true" || val == "1" || strings.Contains(val, "solid")
 	case "border-radius":
-		s.Rounded = val == "true" || val == "1" || val == "rounded"
-
+		s.Rounded = val == "true" || val == "1" || val == "rounded" || (val != "0" && val != "0px" && val != "0rem" && val != "none" && val != "")
 	case "color":
 		s.FgColor = decl.Value
 		s.FgColorSet = true
@@ -461,7 +489,11 @@ func applyDeclaration(s *ComputedStyle, decl *css.Declaration) {
 			s.TextAlign = lipgloss.Left
 		}
 	case "box-shadow":
-		s.Shadow = parseInt(val)
+		if strings.Contains(val, "rgba") || strings.Contains(val, "rgb") || strings.Contains(val, "#") {
+			s.Shadow = 2
+		} else {
+			s.Shadow = parseInt(val)
+		}
 	}
 }
 
@@ -470,6 +502,12 @@ func parseInt(val string) int {
 	val = strings.TrimSuffix(val, "px")
 	val = strings.TrimSuffix(val, "rem")
 	val = strings.TrimSuffix(val, "em")
+	if f, err := strconv.ParseFloat(val, 64); err == nil {
+		if f > 0 && f < 1 {
+			return 1
+		}
+		return int(math.Round(f))
+	}
 	var n int
 	for _, ch := range val {
 		if ch >= '0' && ch <= '9' {

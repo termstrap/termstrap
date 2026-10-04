@@ -16,6 +16,7 @@ var localExamples = []string{
 	"nested",
 	"borders",
 	"shadows",
+	"custom-css",
 	"image/local",
 	"image/three-columns",
 	"image/colormodes",

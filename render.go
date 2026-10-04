@@ -36,7 +36,7 @@ type ImageOverlay struct {
 // Model represents the HTML/CSS rendering context.
 type Model struct {
 	HTML        string   // Raw HTML content
-	Theme       Theme    // Visual color theme (default: ThemeBootstrap)
+	Theme       Theme    // Visual color theme (example: ThemeBootstrap)
 	Stylesheets []string // Additional CSS stylesheets
 	Width       int      // Terminal width in characters
 	RootPath    string   // Base path for local images
