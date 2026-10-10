@@ -107,3 +107,17 @@ func TestClassSpinnerAndShimmer(t *testing.T) {
 		t.Errorf("expected plain text in output:\n%q", out)
 	}
 }
+
+func TestShimmer_WithClassColor(t *testing.T) {
+	html := `<h1 class="text-warning shimmer">Hubs.sh</h1>`
+	m := New(html, WithWidth(40), WithTheme(ThemeTokyoNight), WithStep(0))
+	out, err := m.Render()
+	if err != nil {
+	}
+	t.Logf("OUTPUT:\n%q\n%s", out, out)
+
+	// TokyoNight warning is #e0af68 (RGB 224;175;104)
+	if !strings.Contains(out, "224;175;104") {
+		t.Errorf("expected TokyoNight text-warning RGB 224;175;104 in shimmer output, got:\n%q", out)
+	}
+}
