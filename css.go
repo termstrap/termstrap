@@ -11,6 +11,12 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
+)
+
+var (
+	builtInMatcherMu    sync.RWMutex
+	builtInMatcherCache = make(map[Theme]*CSSMatcher)
 )
 
 // DisplayType specifies the display behavior of a node.
@@ -168,6 +174,16 @@ type CSSMatcher struct {
 
 // NewCSSMatcher parses one or more CSS stylesheets into a CSSMatcher using the specified theme.
 func NewCSSMatcher(theme Theme, stylesheets ...string) (*CSSMatcher, error) {
+	// Fast-path: cache built-in framework & theme matcher if no custom stylesheets are supplied
+	if len(stylesheets) == 0 {
+		builtInMatcherMu.RLock()
+		if cached, ok := builtInMatcherCache[theme]; ok {
+			builtInMatcherMu.RUnlock()
+			return cached, nil
+		}
+		builtInMatcherMu.RUnlock()
+	}
+
 	matcher := &CSSMatcher{Rules: []CSSRule{}, Theme: theme}
 
 	type sheetInput struct {
@@ -288,6 +304,11 @@ func NewCSSMatcher(theme Theme, stylesheets ...string) (*CSSMatcher, error) {
 		// 3. Document Order (earlier < later)
 		return r1.Index < r2.Index
 	})
+	if len(stylesheets) == 0 {
+		builtInMatcherMu.Lock()
+		builtInMatcherCache[theme] = matcher
+		builtInMatcherMu.Unlock()
+	}
 
 	return matcher, nil
 }
