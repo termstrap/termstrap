@@ -1,0 +1,75 @@
+<div class="container p-2">
+  <h1 class="mb-3 text-primary">System Monitoring Dashboard</h1>
+
+  <!-- 4 KPI Cards in a row -->
+  <div class="row mb-3">
+    <div class="col-md-3 mb-2">
+      <div class="border rounded p-2 bg-primary text-white">
+        <h4 class="mb-1">CPU Load</h4>
+        <h2>28.4%</h2>
+        <p class="mb-0">8 Cores Active</p>
+      </div>
+    </div>
+    <div class="col-md-3 mb-2">
+      <div class="border rounded p-2 bg-success text-white">
+        <h4 class="mb-1">Memory</h4>
+        <h2>12.2 GB</h2>
+        <p class="mb-0">of 32 GB Used</p>
+      </div>
+    </div>
+    <div class="col-md-3 mb-2">
+      <div class="border rounded p-2 bg-warning text-dark">
+        <h4 class="mb-1">Disk Usage</h4>
+        <h2>84.6%</h2>
+        <p class="mb-0">Warning Threshold</p>
+      </div>
+    </div>
+    <div class="col-md-3 mb-2">
+      <div class="border rounded p-2 bg-danger text-white">
+        <h4 class="mb-1">Errors</h4>
+        <h2>3 New</h2>
+        <p class="mb-0">Action Required</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detailed section -->
+  <div class="row">
+    <div class="col-md-6 mb-2">
+      <div class="border rounded p-2 bg-light">
+        <h3 class="mb-2">Services Status</h3>
+        <table class="table mb-0">
+          <tbody>
+            <tr>
+              <th>Web API Gateway</th>
+              <td class="text-success fw-bold">ONLINE</td>
+            </tr>
+            <tr>
+              <th>PostgreSQL Primary</th>
+              <td class="text-success fw-bold">ONLINE</td>
+            </tr>
+            <tr>
+              <th>Redis Cache Cluster</th>
+              <td class="text-warning fw-bold">DEGRADED</td>
+            </tr>
+            <tr>
+              <th>Background Worker</th>
+              <td class="text-danger fw-bold">OFFLINE</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="col-md-6 mb-2">
+      <div class="border rounded p-2 bg-light">
+        <h3 class="mb-2">Network Traffic</h3>
+        <p class="mb-1">Ingress: <strong>1.42 Gbps</strong></p>
+        <p class="mb-1">Egress: <strong>890 Mbps</strong></p>
+        <p class="mb-2">Latency (p99): <strong>14.2 ms</strong></p>
+        <div class="p-1 bg-dark text-white rounded">
+          <code>cluster-us-east-1a: 42 nodes healthy</code>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
