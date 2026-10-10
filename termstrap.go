@@ -10,6 +10,7 @@ import (
 type Theme string
 
 const (
+	ThemeNone       Theme = "none"
 	ThemeBootstrap  Theme = "bootstrap"
 	ThemeTokyoNight Theme = "tokyonight"
 	ThemeDracula    Theme = "dracula"
@@ -96,6 +97,23 @@ func WithDisableImages(disable bool) Option {
 func WithDisableHyperlinks(disable bool) Option {
 	return func(m *Model) {
 		m.DisableHyperlinks = disable
+	}
+}
+
+// WithSyntaxHighlight toggles chroma syntax colorization of <pre> code blocks.
+// Highlighting is enabled by default; pass false to disable it.
+func WithSyntaxHighlight(enable bool) Option {
+	return func(m *Model) {
+		m.DisableSyntaxHighlight = !enable
+	}
+}
+
+// WithSyntaxTheme sets the chroma highlighting style used for code blocks
+// (e.g. "monokai", "dracula", "nord", "github-dark"). Empty derives a style
+// from the active visual Theme.
+func WithSyntaxTheme(name string) Option {
+	return func(m *Model) {
+		m.SyntaxTheme = name
 	}
 }
 

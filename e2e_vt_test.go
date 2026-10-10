@@ -28,25 +28,25 @@ func TestE2E_ResponsiveStackingVsSideBySide(t *testing.T) {
 		screen := testutil.NewScreen(70, 0, out)
 
 		// Title at top (container p-2 -> x=2, y=0)
-		screen.AssertText(t, 2, 0, "80s Huge Hits FLAC 2026")
+		screen.AssertText(t, 2, 0, "# 80s Huge Hits FLAC 2026")
 
 		// Below width 100 (md breakpoint), col-md-6 columns stack vertically at full container width (66 cols: [2..67]).
-		// First column (Cover & metadata table) starts at y=2, height=13
-		screen.AssertBorderBox(t, 2, 2, 66, 13)
-		screen.AssertText(t, 6, 8, "Catégorie")
-		screen.AssertText(t, 36, 8, "Musiques")
+		// First column (Cover & metadata table) starts at y=2, height=15 (metadata rendered as a bordered table).
+		screen.AssertBorderBox(t, 2, 2, 66, 15)
+		screen.AssertText(t, 7, 9, "Catégorie")
+		screen.AssertText(t, 37, 9, "Musiques")
 
 		var botY70 int
-		for y := 16; y < 100; y++ {
+		for y := 18; y < 100; y++ {
 			if screen.Char(2, y) == '╰' {
 				botY70 = y
 				break
 			}
 		}
-		height70 := botY70 - 15 + 1
-		screen.AssertBorderBox(t, 2, 15, 66, height70)
-		screen.AssertText(t, 5, 17, "Description")
-		screen.AssertText(t, 8, 19, "• A-Ha - Take On Me [03:48]")
+		height70 := botY70 - 17 + 1
+		screen.AssertBorderBox(t, 2, 17, 66, height70)
+		screen.AssertText(t, 5, 19, "## Description")
+		screen.AssertText(t, 9, 21, "1. A-Ha - Take On Me [03:48]")
 	})
 	t.Run("Side-by-Side at width 120 (above col-md 100 breakpoint)", func(t *testing.T) {
 		m := New(htmlStr, WithWidth(120), WithDisableImages(true))
@@ -58,13 +58,13 @@ func TestE2E_ResponsiveStackingVsSideBySide(t *testing.T) {
 		screen := testutil.NewScreen(120, 0, out)
 
 		// Title at top
-		screen.AssertText(t, 2, 0, "80s Huge Hits FLAC 2026")
+		screen.AssertText(t, 2, 0, "# 80s Huge Hits FLAC 2026")
 
 		// At width 120 (above md 100), col-md-6 divides space into two 58-col columns side-by-side:
-		// Left column: x in [2, 59] (width 58, height 13)
-		// Right column: x in [60, 117] (width 58, height 68)
+		// Left column: x in [2, 59] (width 58, height 15 with the bordered metadata table)
+		// Right column: x in [60, 117]
 		// Both top corners must be on the exact same row (y=2)
-		screen.AssertBorderBox(t, 2, 2, 58, 13)
+		screen.AssertBorderBox(t, 2, 2, 58, 15)
 
 		// Top corners aligned on row 2
 		screen.AssertChar(t, 2, 2, '╭')
@@ -81,8 +81,8 @@ func TestE2E_ResponsiveStackingVsSideBySide(t *testing.T) {
 		}
 		height120 := botY120 - 2 + 1
 		screen.AssertBorderBox(t, 60, 2, 58, height120)
-		screen.AssertText(t, 63, 4, "Description")
-		screen.AssertText(t, 66, 6, "• A-Ha - Take On Me [03:48]")
+		screen.AssertText(t, 63, 4, "## Description")
+		screen.AssertText(t, 67, 6, "1. A-Ha - Take On Me [03:48]")
 	})
 }
 
@@ -260,7 +260,7 @@ func TestE2E_Hyperlinks(t *testing.T) {
 
 	// Border box is rendered
 	screen.AssertChar(t, 0, 0, '╭')
-	screen.AssertText(t, 2, 1, "Resources")
+	screen.AssertText(t, 2, 1, "# Resources")
 	screen.AssertText(t, 2, 3, "Check the Official Repo or Go Docs.")
 
 	// Verify OSC 8 sequence presence in the raw terminal output

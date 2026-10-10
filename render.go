@@ -16,6 +16,7 @@ import (
 
 	_ "golang.org/x/image/webp"
 
+	"github.com/alecthomas/chroma/v2"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/charmbracelet/lipgloss"
 	termimage "github.com/go-scripts/termstrap/image"
@@ -55,12 +56,24 @@ type Model struct {
 	// OptimizeSequences deduplicates consecutive ANSI color codes.
 	OptimizeSequences *bool
 
+	// DisableSyntaxHighlight turns off chroma syntax colorization of <pre>
+	// code blocks. Highlighting is enabled by default.
+	DisableSyntaxHighlight bool
+
+	// SyntaxTheme overrides the chroma highlighting style (e.g. "monokai",
+	// "dracula", "nord", "github-dark"). Empty picks a style from Theme.
+	SyntaxTheme string
+
 	// DisableImages replaces images with [alt](src) text.
 	DisableImages bool
 
 	// Cache policy
 	CachePolicy CachePolicy
 	CacheTTL    time.Duration
+
+	// codeStyle is the chroma style resolved from the theme's --ts-code-* CSS
+	// variables (or SyntaxTheme override), built once per render.
+	codeStyle *chroma.Style
 }
 
 // Render compiles the HTML/CSS tree and returns the rendered ANSI string.
@@ -142,6 +155,16 @@ func (m Model) renderWithOverlays(withOverlays bool) (string, []ImageOverlay, er
 		return "", nil, err
 	}
 
+	// Resolve the syntax-highlighting palette from the theme's --ts-code-* CSS
+	// variables (overridable per theme) once for the whole render.
+	if !m.DisableSyntaxHighlight {
+		var vars map[string]string
+		if matcher.Preprocessor != nil {
+			vars = matcher.Preprocessor.GlobalVars
+		}
+		m.codeStyle = resolveCodeStyle(m.SyntaxTheme, vars)
+	}
+
 	body := doc.Find("body")
 	var rootSel *goquery.Selection
 	if body.Length() > 0 {
@@ -221,6 +244,18 @@ func applyInlineStyle(s ComputedStyle, text string) string {
 		ls = ls.Underline(true)
 		hasStyle = true
 	}
+	if s.Strikethrough {
+		ls = ls.Strikethrough(true)
+		hasStyle = true
+	}
+	if s.Faint {
+		ls = ls.Faint(true)
+		hasStyle = true
+	}
+	if s.Blink {
+		ls = ls.Blink(true)
+		hasStyle = true
+	}
 	if s.FgColor != "" {
 		ls = ls.Foreground(lipgloss.Color(s.FgColor))
 		hasStyle = true
@@ -286,7 +321,11 @@ func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]
 	}
 
 	if node.Tag == "pre" {
-		return applyLipglossStyle(node.Style, node.LipglossWidth, targetHeight, node.Text)
+		text := node.Text
+		if !m.DisableSyntaxHighlight {
+			text = highlightCode(text, node.Lang, m.ColorMode, m.codeStyle)
+		}
+		return applyLipglossStyle(node.Style, node.LipglossWidth, targetHeight, text)
 	}
 
 	if node.Type == NodeText {
@@ -295,6 +334,14 @@ func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]
 
 	if node.Type == NodeImage {
 		return m.renderImageNode(node, currentX, currentY, overlays)
+	}
+
+	if node.Tag == "ul" || node.Tag == "ol" {
+		return m.renderListNode(node, targetHeight, overlays, links)
+	}
+
+	if node.Tag == "table" {
+		return m.renderTable(node, targetHeight, overlays, links)
 	}
 
 	var content string
@@ -341,9 +388,18 @@ func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]
 				}
 			}
 
-			// Pass 2: equalise height across columns if multiple columns
+			// align-items: stretch (default) equalises heights so columns fill the
+			// row; center/end instead keep natural heights and let JoinHorizontal
+			// place each column on the cross axis.
+			crossPos := lipgloss.Top
+			stretch := true
+			if node.Style.AlignItemsSet && node.Style.AlignItems != lipgloss.Top {
+				crossPos = node.Style.AlignItems
+				stretch = false
+			}
+
 			var itemOutputs []string
-			if len(row.children) > 1 && maxHeight > 0 {
+			if stretch && len(row.children) > 1 && maxHeight > 0 {
 				for _, child := range row.children {
 					// Re-render with target height
 					out := m.renderNode(child, currentX, currentY, overlays, maxHeight, links)
@@ -359,11 +415,19 @@ func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]
 				}
 			}
 
+			var rowOut string
 			if len(itemOutputs) == 1 {
-				rowOutputs = append(rowOutputs, itemOutputs[0])
+				rowOut = itemOutputs[0]
 			} else if len(itemOutputs) > 1 {
-				rowOutputs = append(rowOutputs, lipgloss.JoinHorizontal(lipgloss.Top, itemOutputs...))
+				rowOut = lipgloss.JoinHorizontal(crossPos, itemOutputs...)
+			} else {
+				continue
 			}
+			// justify-content positions a row narrower than the content box.
+			if node.Style.JustifyContentSet && node.Style.JustifyContent != lipgloss.Left && node.ContentWidth > lipgloss.Width(rowOut) {
+				rowOut = lipgloss.PlaceHorizontal(node.ContentWidth, node.Style.JustifyContent, rowOut)
+			}
+			rowOutputs = append(rowOutputs, rowOut)
 		}
 		content = lipgloss.JoinVertical(lipgloss.Left, rowOutputs...)
 	} else {
@@ -556,6 +620,32 @@ func (m Model) imageRenderer() termimage.Renderer {
 	)
 }
 
+// borderForStyle resolves a lipgloss border from the computed border-style and
+// border-radius. Dashed/dotted borders are built from box-drawing glyphs since
+// lipgloss has no built-in for them.
+func borderForStyle(s ComputedStyle) lipgloss.Border {
+	switch s.BorderStyle {
+	case "double":
+		return lipgloss.DoubleBorder()
+	case "thick":
+		return lipgloss.ThickBorder()
+	case "hidden", "none":
+		return lipgloss.HiddenBorder()
+	case "dashed":
+		b := lipgloss.NormalBorder()
+		b.Top, b.Bottom, b.Left, b.Right = "╌", "╌", "╎", "╎"
+		return b
+	case "dotted":
+		b := lipgloss.NormalBorder()
+		b.Top, b.Bottom, b.Left, b.Right = "┄", "┄", "┆", "┆"
+		return b
+	}
+	if s.Rounded {
+		return lipgloss.RoundedBorder()
+	}
+	return lipgloss.NormalBorder()
+}
+
 func applyLipglossStyle(s ComputedStyle, width, height int, content string) string {
 	ls := lipgloss.NewStyle()
 
@@ -576,10 +666,7 @@ func applyLipglossStyle(s ComputedStyle, width, height int, content string) stri
 		}
 		paddingV := s.PaddingTop + s.PaddingBottom
 		marginV := s.MarginTop + s.MarginBottom
-		shadowV := 0
-		if s.Shadow > 0 {
-			shadowV = s.Shadow
-		}
+		shadowV := shadowBottomRows(s.Shadow)
 		innerH := height - borderV - paddingV - marginV - shadowV
 		if innerH > 0 {
 			ls = ls.Height(innerH)
@@ -593,31 +680,42 @@ func applyLipglossStyle(s ComputedStyle, width, height int, content string) stri
 	ls = ls.Padding(s.PaddingTop, s.PaddingRight, s.PaddingBottom, s.PaddingLeft)
 
 	// Borders
-	if s.Border {
-		if s.Rounded {
-			ls = ls.BorderStyle(lipgloss.RoundedBorder())
-		} else {
-			ls = ls.BorderStyle(lipgloss.NormalBorder())
+	if s.Border || s.BorderTop || s.BorderBottom || s.BorderLeft || s.BorderRight {
+		ls = ls.BorderStyle(borderForStyle(s))
+		if !s.Border {
+			ls = ls.BorderTop(s.BorderTop).
+				BorderBottom(s.BorderBottom).
+				BorderLeft(s.BorderLeft).
+				BorderRight(s.BorderRight)
 		}
-	} else if s.BorderTop || s.BorderBottom || s.BorderLeft || s.BorderRight {
-		if s.Rounded {
-			ls = ls.BorderStyle(lipgloss.RoundedBorder())
-		} else {
-			ls = ls.BorderStyle(lipgloss.NormalBorder())
-		}
-		ls = ls.BorderTop(s.BorderTop).
-			BorderBottom(s.BorderBottom).
-			BorderLeft(s.BorderLeft).
-			BorderRight(s.BorderRight)
 	}
 
 	if s.BorderColor != "" {
 		ls = ls.BorderForeground(lipgloss.Color(s.BorderColor))
 	}
+	// Per-side border colors override the shared border color.
+	if s.BorderTopColor != "" {
+		ls = ls.BorderTopForeground(lipgloss.Color(s.BorderTopColor))
+	}
+	if s.BorderRightColor != "" {
+		ls = ls.BorderRightForeground(lipgloss.Color(s.BorderRightColor))
+	}
+	if s.BorderBottomColor != "" {
+		ls = ls.BorderBottomForeground(lipgloss.Color(s.BorderBottomColor))
+	}
+	if s.BorderLeftColor != "" {
+		ls = ls.BorderLeftForeground(lipgloss.Color(s.BorderLeftColor))
+	}
 
 	// Colors
 	if s.BgColor != "" {
 		ls = ls.Background(lipgloss.Color(s.BgColor))
+		// CSS border-box: the element background extends under the border, so the
+		// border cells must share the fill color. Without this the border glyphs
+		// render on the terminal's default background, leaving dark seams at every
+		// boundary between colored boxes (most visible where nested column borders
+		// stack up in a gutter).
+		ls = ls.BorderBackground(lipgloss.Color(s.BgColor))
 	}
 	if s.FgColor != "" {
 		ls = ls.Foreground(lipgloss.Color(s.FgColor))
@@ -632,6 +730,18 @@ func applyLipglossStyle(s ComputedStyle, width, height int, content string) stri
 	}
 	if s.Underline {
 		ls = ls.Underline(true)
+	}
+	if s.Strikethrough {
+		ls = ls.Strikethrough(true)
+	}
+	if s.Faint {
+		ls = ls.Faint(true)
+	}
+	if s.Blink {
+		ls = ls.Blink(true)
+	}
+	if s.MaxHeight > 0 && s.Display != DisplayInline {
+		ls = ls.MaxHeight(s.MaxHeight)
 	}
 
 	out := ls.Render(content)
@@ -666,11 +776,11 @@ func persistBackgroundColor(out string, bgColor string) string {
 	}
 
 	lines := strings.Split(out, "\n")
+	bgCode := strings.TrimSuffix(strings.TrimPrefix(bgSeq, "\x1b["), "m")
 	for i, line := range lines {
-		if !strings.Contains(line, bgSeq) {
+		if !strings.Contains(line, bgSeq) && !strings.Contains(line, bgCode) {
 			continue
 		}
-
 		line = strings.ReplaceAll(line, "\x1b[49m", bgSeq)
 
 		lastReset := strings.LastIndex(line, "\x1b[0m")
@@ -741,12 +851,26 @@ func applyShadowWithWidth(content string, shadowSize, maxWidth int) string {
 	}
 
 	bottomShadow := shadowStyle.Render(strings.Repeat(shadowChar, contentWidth))
-	for i := 0; i < effectiveShadow; i++ {
+	bottomRows := shadowBottomRows(effectiveShadow)
+	for range bottomRows {
 		result = append(result, strings.Repeat(" ", effectiveShadow)+bottomShadow)
 	}
 
 	result = append(result, trailing...)
 	return strings.Join(result, "\n")
+}
+
+// shadowBottomRows returns the number of bottom rows a drop shadow of the given
+// horizontal width occupies. Terminal cells are roughly twice as tall as they
+// are wide, so a bottom shadow of N rows reads about twice as thick as a right
+// shadow of N columns; halving the row count keeps the shadow visually
+// balanced. Single source of truth for both the layout height reservation and
+// the rendered output so they never disagree.
+func shadowBottomRows(shadowSize int) int {
+	if shadowSize <= 0 {
+		return 0
+	}
+	return (shadowSize + 1) / 2
 }
 
 func boolStr(b bool, str string) string {

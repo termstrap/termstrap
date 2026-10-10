@@ -226,7 +226,7 @@ func TestEngine_BackgroundColorPersistence(t *testing.T) {
 	boxW := 80
 	boxH := 7
 	screen.AssertBorderBox(t, 0, 0, boxW, boxH)
-	screen.AssertText(t, 3, 2, "TokyoNight Theme")
+	screen.AssertText(t, 3, 2, "### TokyoNight Theme")
 	screen.AssertText(t, 3, 4, "Blue accent header with dark text.")
 
 	// Verify that inside the rounded border box (x in [1, 78], y in [1, 8]),

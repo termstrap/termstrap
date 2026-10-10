@@ -2,6 +2,7 @@ package termstrap
 
 import (
 	"strings"
+	"unicode"
 
 	"github.com/PuerkitoBio/goquery"
 	"golang.org/x/net/html"
@@ -24,6 +25,8 @@ type RenderNode struct {
 	Src      string
 	Alt      string
 	Href     string // URL for <a> tags
+	Lang     string // Source language hint for <pre> code blocks (empty = auto/none)
+	IsTree   bool   // ul/ol flagged as a tree (class="tree" or role="tree")
 	Style    ComputedStyle
 	Children []*RenderNode
 	// Layout Geometry (calculated in character cells)
@@ -70,9 +73,13 @@ func BuildRenderTree(sel *goquery.Selection, matcher *CSSMatcher, termWidth int,
 			sb.WriteString(" ")
 		}
 
+		text := sb.String()
+		if parentStyle != nil {
+			text = applyTextTransform(text, parentStyle.TextTransform)
+		}
 		return &RenderNode{
 			Type:  NodeText,
-			Text:  sb.String(),
+			Text:  text,
 			Style: ComputedStyle{Display: DisplayInline},
 		}
 	}
@@ -111,6 +118,21 @@ func BuildRenderTree(sel *goquery.Selection, matcher *CSSMatcher, termWidth int,
 		rNode.Href = href
 	}
 
+	if tag == "ul" || tag == "ol" {
+		classAttr, _ := sel.Attr("class")
+		role, _ := sel.Attr("role")
+		if role == "tree" {
+			rNode.IsTree = true
+		} else {
+			for _, c := range strings.Fields(classAttr) {
+				if c == "tree" {
+					rNode.IsTree = true
+					break
+				}
+			}
+		}
+	}
+
 	if tag == "img" {
 		rNode.Type = NodeImage
 		rNode.Src, _ = sel.Attr("src")
@@ -120,7 +142,22 @@ func BuildRenderTree(sel *goquery.Selection, matcher *CSSMatcher, termWidth int,
 
 	if tag == "pre" {
 		rNode.Text = sel.Text()
+		// Resolve a language hint from the inner <code class="language-xxx">,
+		// then the <pre>'s own class, following the HTML/Markdown convention.
+		preClass, _ := sel.Attr("class")
+		codeClass, _ := sel.Find("code").First().Attr("class")
+		rNode.Lang = resolveLang(codeClass, preClass)
 		return rNode
+	}
+
+	// ::before pseudo-element (generated content, prepended inline)
+	if beforeText, beforeStyle, ok := matcher.PseudoText(sel, termWidth, &style, "before"); ok {
+		beforeText = applyTextTransform(beforeText, beforeStyle.TextTransform)
+		rNode.Children = append(rNode.Children, &RenderNode{
+			Type:  NodeText,
+			Text:  beforeText,
+			Style: beforeStyle,
+		})
 	}
 
 	// Recursively build children
@@ -135,7 +172,42 @@ func BuildRenderTree(sel *goquery.Selection, matcher *CSSMatcher, termWidth int,
 		}
 	}
 
+	// ::after pseudo-element (generated content, appended inline)
+	if afterText, afterStyle, ok := matcher.PseudoText(sel, termWidth, &style, "after"); ok {
+		afterText = applyTextTransform(afterText, afterStyle.TextTransform)
+		rNode.Children = append(rNode.Children, &RenderNode{
+			Type:  NodeText,
+			Text:  afterText,
+			Style: afterStyle,
+		})
+	}
+
 	return rNode
+}
+
+// applyTextTransform applies a CSS text-transform to raw (ANSI-free) text.
+func applyTextTransform(text, transform string) string {
+	switch transform {
+	case "uppercase":
+		return strings.ToUpper(text)
+	case "lowercase":
+		return strings.ToLower(text)
+	case "capitalize":
+		var b strings.Builder
+		b.Grow(len(text))
+		prevSpace := true
+		for _, r := range text {
+			if prevSpace && unicode.IsLetter(r) {
+				b.WriteRune(unicode.ToUpper(r))
+			} else {
+				b.WriteRune(r)
+			}
+			prevSpace = unicode.IsSpace(r)
+		}
+		return b.String()
+	default:
+		return text
+	}
 }
 
 // ComputeLayout performs layout calculations on the RenderTree.
@@ -158,6 +230,18 @@ func computeWidths(node *RenderNode, parentWidth int) {
 		avail = 1
 	}
 
+	if node.Style.Width > 0 {
+		explicitW := node.Style.Width - node.Style.MarginLeft - node.Style.MarginRight - node.Style.Shadow
+		if explicitW > 0 && explicitW < avail {
+			avail = explicitW
+		}
+	}
+	if node.Style.MaxWidth > 0 {
+		maxW := node.Style.MaxWidth - node.Style.MarginLeft - node.Style.MarginRight - node.Style.Shadow
+		if maxW > 0 && maxW < avail {
+			avail = maxW
+		}
+	}
 	borderH := 0
 	if node.Style.Border || node.Style.BorderLeft {
 		borderH++
