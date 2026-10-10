@@ -86,6 +86,159 @@ func (m Model) Render() (string, error) {
 	return rendered, err
 }
 
+// StickyRegion describes a `position: sticky` section within a rendered body:
+// where its pinned header lives and how to draw it when pinned.
+type StickyRegion struct {
+	// StartLine is the 0-based line offset of the section (its sticky header)
+	// within the rendered Body returned by RenderStickyRegions.
+	StartLine int
+	// Height is the number of rendered lines of the pinned Header.
+	Height int
+	// Header is the rendered ANSI of the pinned header, sized to Model.Width.
+	Header string
+}
+
+// stickySelector matches elements that should stick: the `.sticky`,
+// `.sticky-top`, `.sticky-bottom`, `.position-sticky`, `.position-fixed`,
+// `.fixed-top` and `.fixed-bottom` classes, plus any element whose inline
+// style requests `position: sticky` or `position: fixed`.
+const stickySelector = `.sticky, .sticky-top, .sticky-bottom, .position-sticky, .position-fixed, .fixed-top, .fixed-bottom, [style*="position:sticky"], [style*="position: sticky"], [style*="position:fixed"], [style*="position: fixed"]`
+
+// RenderStickyRegions renders the document into a single scrollable body with
+// every sticky element kept inline (normal flow), and returns the line offsets
+// and pre-rendered headers of each sticky section. A scrolling container (e.g.
+// a Bubble Tea viewport) uses the regions to pin the active section's header at
+// the top once its natural position scrolls above the viewport — i.e. genuine
+// CSS `position: sticky` activation on scroll, including push-off by the next
+// section.
+//
+// If no sticky element exists, regions is nil and body is the full render.
+// Sections are rendered segment-by-segment (split at each sticky sibling) so
+// the reported offsets match the returned body exactly.
+func (m Model) RenderStickyRegions() (body string, regions []StickyRegion, err error) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(m.HTML))
+	if err != nil {
+		return "", nil, err
+	}
+	if doc.Find(stickySelector).Length() == 0 {
+		body, err = m.Render()
+		return body, nil, err
+	}
+
+	// Each top-level child of <body> is a section. A section is sticky when it
+	// is, or contains, a sticky element; its pinned header is that element
+	// rendered inside the section's own wrapper (so padding/width match).
+	sections := doc.Find("body").Children()
+	if sections.Length() == 0 {
+		body, err = m.Render()
+		return body, nil, err
+	}
+
+	var parts []string
+	line := 0
+	sections.Each(func(_ int, s *goquery.Selection) {
+		if err != nil {
+			return
+		}
+		outer, e := goquery.OuterHtml(s)
+		if e != nil {
+			return
+		}
+
+		seg := m
+		seg.HTML = outer
+		segText, serr := seg.Render()
+		if serr != nil {
+			err = serr
+			return
+		}
+
+		sticky := s
+		if !s.Is(stickySelector) {
+			sticky = s.Find(stickySelector).First()
+		}
+		if sticky.Length() > 0 {
+			headerHTML := outer
+			if sticky.Nodes[0] != s.Nodes[0] {
+				// Keep the section wrapper, replace its body with just the sticky.
+				stickyOuter, _ := goquery.OuterHtml(sticky)
+				open := "<" + goquery.NodeName(s)
+				if cls, ok := s.Attr("class"); ok && cls != "" {
+					open += ` class="` + cls + `"`
+				}
+				headerHTML = open + ">" + stickyOuter + "</" + goquery.NodeName(s) + ">"
+			}
+			hm := m
+			hm.HTML = headerHTML
+			hdr, herr := hm.Render()
+			if herr != nil {
+				err = herr
+				return
+			}
+			hdr = strings.TrimRight(hdr, "\n")
+			regions = append(regions, StickyRegion{
+				StartLine: line,
+				Height:    lipgloss.Height(hdr),
+				Header:    hdr,
+			})
+		}
+
+		parts = append(parts, segText)
+		line += lipgloss.Height(segText)
+	})
+	if err != nil {
+		return "", nil, err
+	}
+
+	return strings.Join(parts, "\n"), regions, nil
+}
+
+// PinSticky composites a scrolled viewport view with CSS `position: sticky`
+// behaviour: the header of the section that has scrolled above the top is
+// pinned onto the first lines of view, and is pushed up as the next section's
+// header arrives. regions come from RenderStickyRegions; view is the viewport's
+// current visible window; yOffset is the viewport's scroll offset in lines.
+func PinSticky(view string, regions []StickyRegion, yOffset int) string {
+	if len(regions) == 0 {
+		return view
+	}
+
+	active := -1
+	for i, r := range regions {
+		if r.StartLine < yOffset {
+			active = i
+		} else {
+			break
+		}
+	}
+	if active < 0 {
+		return view
+	}
+
+	hdr := strings.Split(regions[active].Header, "\n")
+	n := len(hdr)
+
+	// Push-off: when the next section's header enters the pinned band, slide the
+	// current pinned header up by the overlap.
+	delta := 0
+	if active+1 < len(regions) {
+		if gap := regions[active+1].StartLine - yOffset; gap < n {
+			delta = n - gap
+		}
+	}
+	if delta >= n {
+		return view
+	}
+
+	lines := strings.Split(view, "\n")
+	for i := 0; i < n-delta; i++ {
+		if i < len(lines) {
+			lines[i] = hdr[i+delta]
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
 // RenderWithOverlays returns rendered text along with separated image overlays.
 func (m Model) RenderWithOverlays() (string, []ImageOverlay, error) {
 	return m.renderWithOverlays(true)

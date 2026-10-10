@@ -367,6 +367,32 @@ for step := range 50 {
 - **Fonctions Go autonomes** :
   - `termstrap.Shimmer(text string, step int, opts ...ShimmerOptions) string`
   - `termstrap.Spinner(step int, frames ...[]string) string`
+
+## 8quater. En-têtes Épinglés (`position-sticky` / `.sticky`)
+
+Un terminal n'a pas de `position: sticky` CSS : le rendu est **statique**, et le
+défilement appartient au conteneur appelant (ex. un `viewport` Bubble Tea). Le
+comportement sticky est donc fourni en deux temps, **entièrement calculés par
+termstrap** ; l'appelant ne fournit que la position de scroll courante.
+
+```go
+// 1. Une fois (ou au resize) : rendu du corps + repérage des sections sticky.
+body, regions, err := termstrap.Model{HTML: html, Width: w}.RenderStickyRegions()
+viewport.SetContent(body)
+
+// 2. À chaque frame : épingle la section active selon le scroll.
+view := termstrap.PinSticky(viewport.View(), regions, viewport.YOffset())
+```
+
+- **Vrai `sticky`** : chaque en-tête défile normalement et ne se colle en haut
+  qu'une fois sa position naturelle passée au-dessus du viewport ; il est
+  ensuite **poussé** par l'en-tête de la section suivante.
+- **Détection** : classes `.sticky`, `.sticky-top`, `.position-sticky`,
+  `.fixed-top`… (Bootstrap) ou `style="position: sticky|fixed"`.
+- **Sections** : chaque enfant de premier niveau du `body` est une section ;
+  son en-tête épinglé est l'élément sticky rendu dans le wrapper de la section
+  (padding/largeur conservés).
+
 ## 9. Rendu d'Images (`<img>`)
 
 ### Formats d'Images
