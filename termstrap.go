@@ -117,3 +117,9 @@ func WithSyntaxTheme(name string) Option {
 	}
 }
 
+// WithStep sets the animation frame step index (for <spinner>, <shimmer>, .spinner, .shimmer).
+func WithStep(step int) Option {
+	return func(m *Model) {
+		m.Step = step
+	}
+}
