@@ -3,6 +3,7 @@ package termstrap
 import (
 	"fmt"
 	"image"
+	"image/color"
 	"io"
 	"net/http"
 	"os"
@@ -18,11 +19,11 @@ import (
 
 	"github.com/alecthomas/chroma/v2"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/colorprofile"
 	termimage "github.com/go-scripts/termstrap/image"
 	"github.com/muesli/reflow/wordwrap"
 	"github.com/muesli/reflow/wrap"
-	"github.com/muesli/termenv"
 )
 
 // ImageOverlay represents an image escape sequence separated from the text.
@@ -74,6 +75,9 @@ type Model struct {
 	// codeStyle is the chroma style resolved from the theme's --ts-code-* CSS
 	// variables (or SyntaxTheme override), built once per render.
 	codeStyle *chroma.Style
+
+	// Step specifies the animation frame step for <spinner>, <shimmer>, .spinner, .shimmer.
+	Step int
 }
 
 // Render compiles the HTML/CSS tree and returns the rendered ANSI string.
@@ -95,17 +99,17 @@ func (m Model) renderWithOverlays(withOverlays bool) (string, []ImageOverlay, er
 	// Configure Lipgloss color profile based on ColorMode and environment
 	switch m.ColorMode {
 	case termimage.ColorMode256:
-		lipgloss.SetColorProfile(termenv.ANSI256)
+		lipgloss.Writer.Profile = colorprofile.ANSI256
 	case termimage.ColorMode16:
-		lipgloss.SetColorProfile(termenv.ANSI)
+		lipgloss.Writer.Profile = colorprofile.ANSI
 	case termimage.ColorModeTrueColor:
-		lipgloss.SetColorProfile(termenv.TrueColor)
+		lipgloss.Writer.Profile = colorprofile.TrueColor
 	default:
 		colorTerm := strings.ToLower(os.Getenv("COLORTERM"))
 		if colorTerm == "truecolor" || colorTerm == "24bit" || os.Getenv("CLICOLOR_FORCE") == "1" {
-			lipgloss.SetColorProfile(termenv.TrueColor)
-		} else if lipgloss.ColorProfile() == termenv.Ascii {
-			lipgloss.SetColorProfile(termenv.TrueColor)
+			lipgloss.Writer.Profile = colorprofile.TrueColor
+		} else if lipgloss.Writer.Profile == colorprofile.Ascii || lipgloss.Writer.Profile == colorprofile.NoTTY {
+			lipgloss.Writer.Profile = colorprofile.TrueColor
 		}
 	}
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(m.HTML))
@@ -242,6 +246,12 @@ func applyInlineStyle(s ComputedStyle, text string) string {
 	}
 	if s.Underline {
 		ls = ls.Underline(true)
+		if s.UnderlineStyleSet {
+			ls = ls.UnderlineStyle(s.UnderlineStyle)
+		}
+		if s.UnderlineColor != "" {
+			ls = ls.UnderlineColor(lipgloss.Color(s.UnderlineColor))
+		}
 		hasStyle = true
 	}
 	if s.Strikethrough {
@@ -275,8 +285,26 @@ func (m Model) renderInline(node *RenderNode, currentX, currentY int, overlays *
 	if node == nil {
 		return ""
 	}
+	if node.Tag == "spinner" || node.Style.Spinner {
+		return Spinner(m.Step)
+	}
 
 	if node.Type == NodeText {
+		if node.Style.Shimmer {
+			base := node.Style.FgColor
+			if base == "" {
+				base = "#44475a"
+			}
+			highlight := node.Style.ShimmerHighlight
+			if highlight == "" {
+				highlight = "#ffffff"
+			}
+			return Shimmer(node.Text, m.Step, ShimmerOptions{
+				BaseColor:      base,
+				HighlightColor: highlight,
+				Bold:           node.Style.Bold,
+			})
+		}
 		return applyInlineStyle(node.Style, node.Text)
 	}
 
@@ -629,6 +657,16 @@ func borderForStyle(s ComputedStyle) lipgloss.Border {
 		return lipgloss.DoubleBorder()
 	case "thick":
 		return lipgloss.ThickBorder()
+	case "block":
+		return lipgloss.BlockBorder()
+	case "outer-half-block":
+		return lipgloss.OuterHalfBlockBorder()
+	case "inner-half-block":
+		return lipgloss.InnerHalfBlockBorder()
+	case "markdown":
+		return lipgloss.MarkdownBorder()
+	case "ascii":
+		return lipgloss.ASCIIBorder()
 	case "hidden", "none":
 		return lipgloss.HiddenBorder()
 	case "dashed":
@@ -690,7 +728,13 @@ func applyLipglossStyle(s ComputedStyle, width, height int, content string) stri
 		}
 	}
 
-	if s.BorderColor != "" {
+	if len(s.BorderBlend) >= 2 {
+		colors := make([]color.Color, len(s.BorderBlend))
+		for i, c := range s.BorderBlend {
+			colors[i] = lipgloss.Color(c)
+		}
+		ls = ls.BorderForegroundBlend(colors...)
+	} else if s.BorderColor != "" {
 		ls = ls.BorderForeground(lipgloss.Color(s.BorderColor))
 	}
 	// Per-side border colors override the shared border color.
@@ -730,6 +774,12 @@ func applyLipglossStyle(s ComputedStyle, width, height int, content string) stri
 	}
 	if s.Underline {
 		ls = ls.Underline(true)
+		if s.UnderlineStyleSet {
+			ls = ls.UnderlineStyle(s.UnderlineStyle)
+		}
+		if s.UnderlineColor != "" {
+			ls = ls.UnderlineColor(lipgloss.Color(s.UnderlineColor))
+		}
 	}
 	if s.Strikethrough {
 		ls = ls.Strikethrough(true)
@@ -745,7 +795,9 @@ func applyLipglossStyle(s ComputedStyle, width, height int, content string) stri
 	}
 
 	out := ls.Render(content)
-	if s.BgColor != "" {
+	if len(s.BgGradient) >= 2 {
+		out = applyBackgroundGradient(out, s.BgGradient)
+	} else if s.BgColor != "" {
 		out = persistBackgroundColor(out, s.BgColor)
 	}
 	if s.Shadow > 0 {
@@ -800,6 +852,57 @@ func persistBackgroundColor(out string, bgColor string) string {
 		prefix = strings.ReplaceAll(prefix, bgSeq+bgSeq, bgSeq)
 
 		lines[i] = prefix + suffix
+	}
+	return strings.Join(lines, "\n")
+}
+func applyBackgroundGradient(out string, stopHexes []string) string {
+	if out == "" || len(stopHexes) < 2 {
+		return out
+	}
+	stops := make([]color.Color, len(stopHexes))
+	for i, h := range stopHexes {
+		stops[i] = lipgloss.Color(h)
+	}
+
+	lines := strings.Split(out, "\n")
+	w := 0
+	for _, l := range lines {
+		if lw := lipgloss.Width(l); lw > w {
+			w = lw
+		}
+	}
+	if w <= 0 {
+		return out
+	}
+
+	blended := lipgloss.Blend1D(w, stops...)
+	bgSeqs := make([]string, len(blended))
+	for i, c := range blended {
+		r, g, b, _ := c.RGBA()
+		bgSeqs[i] = fmt.Sprintf("\x1b[48;2;%d;%d;%dm", r>>8, g>>8, b>>8)
+	}
+
+	for lineIdx, line := range lines {
+		var sb strings.Builder
+		col := 0
+		i := 0
+		for i < len(line) {
+			if loc := ansiRegex.FindStringIndex(line[i:]); loc != nil && loc[0] == 0 {
+				sb.WriteString(line[i : i+loc[1]])
+				i += loc[1]
+				continue
+			}
+			r := []rune(line[i:])
+			ch := string(r[0])
+			if col < len(bgSeqs) {
+				sb.WriteString(bgSeqs[col])
+			}
+			sb.WriteString(ch)
+			col += lipgloss.Width(ch)
+			i += len(ch)
+		}
+		sb.WriteString("\x1b[0m")
+		lines[lineIdx] = sb.String()
 	}
 	return strings.Join(lines, "\n")
 }

@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/lipgloss"
-	"github.com/muesli/termenv"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/colorprofile"
 )
 
 // sgrParams returns the set of numeric SGR parameters present anywhere in s.
@@ -15,6 +15,11 @@ func sgrParams(s string) map[string]bool {
 		for _, p := range strings.Split(m[1], ";") {
 			if p != "" {
 				out[p] = true
+				if strings.Contains(p, ":") {
+					for _, sub := range strings.Split(p, ":") {
+						out[sub] = true
+					}
+				}
 			}
 		}
 	}
@@ -23,7 +28,7 @@ func sgrParams(s string) map[string]bool {
 
 func renderTC(t *testing.T, html string, width int) string {
 	t.Helper()
-	lipgloss.SetColorProfile(termenv.TrueColor)
+	lipgloss.Writer.Profile = colorprofile.TrueColor
 	out, err := New(html, WithWidth(width)).Render()
 	if err != nil {
 		t.Fatalf("render: %v", err)
@@ -42,7 +47,12 @@ func TestTextDecorations(t *testing.T) {
 		{"del-tag", `<p><del>x</del></p>`, "9"},
 		{"faint-opacity", `<p style="opacity: 0.5;">x</p>`, "2"},
 		{"blink", `<p style="text-decoration: blink;">x</p>`, "5"},
+		{"blink-tag", `<p><blink>x</blink></p>`, "5"},
 		{"underline", `<p style="text-decoration: underline;">x</p>`, "4"},
+		{"underline-double", `<p style="text-decoration: underline; text-decoration-style: double;">x</p>`, "4:2"},
+		{"underline-curly", `<p style="text-decoration: underline; text-decoration-style: wavy;">x</p>`, "4:3"},
+		{"underline-dotted", `<p style="text-decoration: underline; text-decoration-style: dotted;">x</p>`, "4:4"},
+		{"underline-dashed", `<p style="text-decoration: underline; text-decoration-style: dashed;">x</p>`, "4:5"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -64,6 +74,9 @@ func TestBorderStyles(t *testing.T) {
 		{"dashed", `<div style="border: 1px dashed;">x</div>`, "╌"},
 		{"dotted", `<div style="border: 1px dotted;">x</div>`, "┄"},
 		{"thick", `<div style="border: 3px solid;">x</div>`, "┃"},
+		{"block", `<div style="border: 1px solid; border-style: block;">x</div>`, "█"},
+		{"markdown", `<div style="border: 1px solid; border-style: markdown;">x</div>`, "-"},
+		{"ascii", `<div style="border: 1px solid; border-style: ascii;">x</div>`, "+"},
 		{"rounded", `<div style="border: 1px solid; border-radius: 4px;">x</div>`, "╭"},
 		{"normal", `<div style="border: 1px solid;">x</div>`, "┌"},
 	}
@@ -87,6 +100,36 @@ func TestPerSideBorderColor(t *testing.T) {
 	// Both a red (38/48;2;255;0;0) and blue (…0;0;255) sequence should be present.
 	if !strings.Contains(out, "255;0;0") || !strings.Contains(out, "0;0;255") {
 		t.Errorf("expected both red and blue border colors:\n%q", out)
+	}
+}
+func TestUnderlineColor(t *testing.T) {
+	out := renderTC(t, `<p style="text-decoration: underline; text-decoration-color: #ff00ff;">colored underline</p>`, 30)
+	// Expect SGR 58;2;255;0;255 (ANSI underline color sequence)
+	if !strings.Contains(out, "58;2;255;0;255") {
+		t.Errorf("expected underline color sequence (58;2;255;0;255) in output:\n%q", out)
+	}
+}
+
+func TestBorderBlend(t *testing.T) {
+	out := renderTC(t, `<div style="border: 1px solid; border-image: #ff0000 #00ff00;">blended border</div>`, 30)
+	// Expect ANSI RGB color sequences for blended border edges
+	if !strings.Contains(out, "38;2;") {
+		t.Errorf("expected 24-bit ANSI colors for blended border, got:\n%q", out)
+	}
+}
+func TestBackgroundGradient(t *testing.T) {
+	out := renderTC(t, `<div style="background: linear-gradient(#ff0000, #0000ff); width: 20px;">gradient text</div>`, 20)
+	// Expect 24-bit background color escape sequences
+	if !strings.Contains(out, "48;2;") {
+		t.Errorf("expected 24-bit background gradient in output:\n%q", out)
+	}
+}
+
+func TestColorTransformations(t *testing.T) {
+	// Test lighten, darken, complementary
+	out := renderTC(t, `<div style="color: lighten(#000000, 50%); background-color: complementary(#0000ff);">test</div>`, 20)
+	if !strings.Contains(out, "38;2;") || !strings.Contains(out, "48;2;") {
+		t.Errorf("expected transformed colors in output:\n%q", out)
 	}
 }
 

@@ -1,11 +1,12 @@
 package termstrap
 
 import (
+	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/andybalholm/cascadia"
 	"github.com/aymerick/douceur/css"
 	"github.com/aymerick/douceur/parser"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"regexp"
 	"sort"
 	"strconv"
@@ -81,14 +82,16 @@ type ComputedStyle struct {
 	BorderRightColor  string
 	BorderBottomColor string
 	BorderLeftColor   string
-
+	// Border color blending / gradients
+	BorderBlend []string
 	// Shadow (0 = none, 1 = sm, 2 = md, 3 = lg)
 	Shadow int
 
 	// Colors
 	FgColor    string
 	FgColorSet bool
-	BgColor    string
+	BgColor     string
+	BgGradient  []string
 
 	// Typography
 	Bold              bool
@@ -97,12 +100,21 @@ type ComputedStyle struct {
 	ItalicSet         bool
 	Underline         bool
 	UnderlineSet      bool
+	UnderlineStyle    lipgloss.Underline // single, double, curly/wavy, dotted, dashed
+	UnderlineStyleSet bool
+	UnderlineColor    string
+	UnderlineColorSet bool
 	Strikethrough     bool
 	StrikethroughSet  bool
 	Faint             bool
 	FaintSet          bool
 	Blink             bool
 	BlinkSet          bool
+	Shimmer           bool
+	ShimmerSet        bool
+	ShimmerHighlight  string
+	Spinner           bool
+	SpinnerSet        bool
 	TextAlign         lipgloss.Position
 	TextAlignSet      bool
 	TextTransform     string // "", "uppercase", "lowercase", "capitalize"
@@ -296,6 +308,18 @@ func (m *CSSMatcher) ComputeStyleForSelection(sel *goquery.Selection, termWidth 
 	switch tagName {
 	case "span", "a", "strong", "b", "em", "i", "code", "img":
 		s.Display = DisplayInline
+	case "blink":
+		s.Display = DisplayInline
+		s.Blink = true
+		s.BlinkSet = true
+	case "spinner":
+		s.Display = DisplayInline
+		s.Spinner = true
+		s.SpinnerSet = true
+	case "shimmer":
+		s.Display = DisplayInline
+		s.Shimmer = true
+		s.ShimmerSet = true
 	case "s", "del", "strike":
 		s.Display = DisplayInline
 		s.Strikethrough = true
@@ -370,6 +394,15 @@ func (m *CSSMatcher) ComputeStyleForSelection(sel *goquery.Selection, termWidth 
 	bp := detectBreakpoint(termWidth)
 	classAttr, _ := sel.Attr("class")
 	classes := strings.Fields(classAttr)
+	for _, c := range classes {
+		if c == "spinner" {
+			s.Spinner = true
+			s.SpinnerSet = true
+		} else if c == "shimmer" {
+			s.Shimmer = true
+			s.ShimmerSet = true
+		}
+	}
 	span, isAuto := resolveColSpanResponsive(classes, bp)
 	if span > 0 {
 		s.ColSpan = span
@@ -399,6 +432,14 @@ func (m *CSSMatcher) ComputeStyleForSelection(sel *goquery.Selection, termWidth 
 			s.Underline = parentStyle.Underline
 			s.UnderlineSet = parentStyle.UnderlineSet
 		}
+		if !s.UnderlineStyleSet {
+			s.UnderlineStyle = parentStyle.UnderlineStyle
+			s.UnderlineStyleSet = parentStyle.UnderlineStyleSet
+		}
+		if !s.UnderlineColorSet {
+			s.UnderlineColor = parentStyle.UnderlineColor
+			s.UnderlineColorSet = parentStyle.UnderlineColorSet
+		}
 		if !s.StrikethroughSet {
 			s.Strikethrough = parentStyle.Strikethrough
 			s.StrikethroughSet = parentStyle.StrikethroughSet
@@ -410,6 +451,15 @@ func (m *CSSMatcher) ComputeStyleForSelection(sel *goquery.Selection, termWidth 
 		if !s.BlinkSet {
 			s.Blink = parentStyle.Blink
 			s.BlinkSet = parentStyle.BlinkSet
+		}
+		if !s.ShimmerSet {
+			s.Shimmer = parentStyle.Shimmer
+			s.ShimmerSet = parentStyle.ShimmerSet
+			s.ShimmerHighlight = parentStyle.ShimmerHighlight
+		}
+		if !s.SpinnerSet {
+			s.Spinner = parentStyle.Spinner
+			s.SpinnerSet = parentStyle.SpinnerSet
 		}
 		if !s.TextTransformSet {
 			s.TextTransform = parentStyle.TextTransform
@@ -774,18 +824,20 @@ func applyDeclaration(s *ComputedStyle, decl *css.Declaration, ctx UnitContext) 
 			s.FgColor = ""
 			s.FgColorSet = false
 		} else {
-			s.FgColor = decl.Value
+			s.FgColor = resolveColor(decl.Value)
 			s.FgColorSet = true
 		}
 	case "background-color", "background":
-		if val == "transparent" || val == "inherit" || val == "initial" {
+		if strings.Contains(val, "gradient") {
+			s.BgGradient = parseColorStops(val)
+		} else if val == "transparent" || val == "inherit" || val == "initial" {
 			s.BgColor = ""
+			s.BgGradient = nil
 		} else {
-			s.BgColor = decl.Value
+			s.BgColor = resolveColor(decl.Value)
 		}
 	case "border-color":
-		s.BorderColor = decl.Value
-
+		s.BorderColor = resolveColor(decl.Value)
 	case "font-weight":
 		s.BoldSet = true
 		if val == "bold" || val == "700" || val == "800" || val == "900" {
@@ -805,6 +857,22 @@ func applyDeclaration(s *ComputedStyle, decl *css.Declaration, ctx UnitContext) 
 			s.UnderlineSet = true
 			s.Underline = true
 		}
+		if strings.Contains(val, "wavy") || strings.Contains(val, "curly") {
+			s.UnderlineStyle = lipgloss.UnderlineCurly
+			s.UnderlineStyleSet = true
+		} else if strings.Contains(val, "double") {
+			s.UnderlineStyle = lipgloss.UnderlineDouble
+			s.UnderlineStyleSet = true
+		} else if strings.Contains(val, "dotted") {
+			s.UnderlineStyle = lipgloss.UnderlineDotted
+			s.UnderlineStyleSet = true
+		} else if strings.Contains(val, "dashed") {
+			s.UnderlineStyle = lipgloss.UnderlineDashed
+			s.UnderlineStyleSet = true
+		} else if strings.Contains(val, "solid") {
+			s.UnderlineStyle = lipgloss.UnderlineSingle
+			s.UnderlineStyleSet = true
+		}
 		if strings.Contains(val, "line-through") {
 			s.StrikethroughSet = true
 			s.Strikethrough = true
@@ -813,12 +881,52 @@ func applyDeclaration(s *ComputedStyle, decl *css.Declaration, ctx UnitContext) 
 			s.BlinkSet = true
 			s.Blink = true
 		}
+		if strings.Contains(val, "shimmer") {
+			s.ShimmerSet = true
+			s.Shimmer = true
+		}
+		if strings.Contains(val, "spinner") {
+			s.SpinnerSet = true
+			s.Spinner = true
+		}
 		if strings.Contains(val, "none") {
 			s.UnderlineSet = true
 			s.Underline = false
+			s.UnderlineStyleSet = true
+			s.UnderlineStyle = lipgloss.UnderlineNone
 			s.StrikethroughSet = true
 			s.Strikethrough = false
 		}
+	case "animation", "animation-name":
+		if strings.Contains(val, "shimmer") {
+			s.ShimmerSet = true
+			s.Shimmer = true
+		}
+		if strings.Contains(val, "spinner") {
+			s.SpinnerSet = true
+			s.Spinner = true
+		}
+		if strings.Contains(val, "blink") {
+			s.BlinkSet = true
+			s.Blink = true
+		}
+	case "text-decoration-style":
+		s.UnderlineStyleSet = true
+		switch strings.TrimSpace(val) {
+		case "wavy", "curly":
+			s.UnderlineStyle = lipgloss.UnderlineCurly
+		case "double":
+			s.UnderlineStyle = lipgloss.UnderlineDouble
+		case "dotted":
+			s.UnderlineStyle = lipgloss.UnderlineDotted
+		case "dashed":
+			s.UnderlineStyle = lipgloss.UnderlineDashed
+		default:
+			s.UnderlineStyle = lipgloss.UnderlineSingle
+		}
+	case "text-decoration-color":
+		s.UnderlineColor = decl.Value
+		s.UnderlineColorSet = true
 	case "text-align":
 		s.TextAlignSet = true
 		switch val {
@@ -863,6 +971,8 @@ func applyDeclaration(s *ComputedStyle, decl *css.Declaration, ctx UnitContext) 
 		s.BorderBottomColor = decl.Value
 	case "border-left-color":
 		s.BorderLeftColor = decl.Value
+	case "border-image", "border-color-blend":
+		s.BorderBlend = parseColorStops(val)
 	case "max-width":
 		if val != "none" {
 			s.MaxWidth = ResolveLength(val, AxisX, ctx)
@@ -887,7 +997,7 @@ func applyDeclaration(s *ComputedStyle, decl *css.Declaration, ctx UnitContext) 
 
 // borderStyleKeyword extracts a supported border-style keyword from a CSS value.
 func borderStyleKeyword(val string) string {
-	for _, kw := range []string{"double", "dashed", "dotted", "hidden", "none", "solid"} {
+	for _, kw := range []string{"outer-half-block", "inner-half-block", "block", "markdown", "ascii", "double", "dashed", "dotted", "hidden", "none", "solid"} {
 		if strings.Contains(val, kw) {
 			return kw
 		}
@@ -955,6 +1065,52 @@ func listStyleKeyword(val string) string {
 		}
 	}
 	return ""
+}
+// parseColorStops extracts hex/rgb/named colors from a CSS linear-gradient or space/comma separated list.
+func parseColorStops(val string) []string {
+	var stops []string
+	// Match hex colors #fff, #ffffff, or rgb(...)
+	hexRe := regexp.MustCompile(`#[0-9a-fA-F]{3,8}`)
+	for _, m := range hexRe.FindAllString(val, -1) {
+		stops = append(stops, m)
+	}
+	return stops
+}
+// resolveColor parses and applies color transformations like lighten(), darken(), complementary(), etc.
+func resolveColor(val string) string {
+	v := strings.TrimSpace(val)
+	if strings.HasPrefix(v, "lighten(") && strings.HasSuffix(v, ")") {
+		inner := strings.TrimSuffix(strings.TrimPrefix(v, "lighten("), ")")
+		parts := strings.Split(inner, ",")
+		if len(parts) >= 2 {
+			c := lipgloss.Color(strings.TrimSpace(parts[0]))
+			pctStr := strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(parts[1]), "%"))
+			if pct, err := strconv.ParseFloat(pctStr, 64); err == nil {
+				lightened := lipgloss.Lighten(c, pct/100.0)
+				r, g, b, _ := lightened.RGBA()
+				return fmt.Sprintf("#%02x%02x%02x", r>>8, g>>8, b>>8)
+			}
+		}
+	} else if strings.HasPrefix(v, "darken(") && strings.HasSuffix(v, ")") {
+		inner := strings.TrimSuffix(strings.TrimPrefix(v, "darken("), ")")
+		parts := strings.Split(inner, ",")
+		if len(parts) >= 2 {
+			c := lipgloss.Color(strings.TrimSpace(parts[0]))
+			pctStr := strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(parts[1]), "%"))
+			if pct, err := strconv.ParseFloat(pctStr, 64); err == nil {
+				darkened := lipgloss.Darken(c, pct/100.0)
+				r, g, b, _ := darkened.RGBA()
+				return fmt.Sprintf("#%02x%02x%02x", r>>8, g>>8, b>>8)
+			}
+		}
+	} else if strings.HasPrefix(v, "complementary(") && strings.HasSuffix(v, ")") {
+		inner := strings.TrimSuffix(strings.TrimPrefix(v, "complementary("), ")")
+		c := lipgloss.Color(strings.TrimSpace(inner))
+		comp := lipgloss.Complementary(c)
+		r, g, b, _ := comp.RGBA()
+		return fmt.Sprintf("#%02x%02x%02x", r>>8, g>>8, b>>8)
+	}
+	return val
 }
 
 // shadowBlurRe captures CSS length tokens (rem/px) from a box-shadow value,
