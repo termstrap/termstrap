@@ -119,8 +119,8 @@ func TestMedia_EndToEndResponsiveRender(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Render failed for medium: %v", err)
 	}
-	if !strings.Contains(outMedium, "220;52;69") {
-		t.Errorf("expected red color (220;52;69) at width 75, got:\n%q", outMedium)
+	if !strings.Contains(outMedium, "220;53;69") {
+		t.Errorf("expected red color (220;53;69) at width 75, got:\n%q", outMedium)
 	}
 
 	// 3. Wide terminal (100 cols): should be Green (#198754 -> 25;135;84)

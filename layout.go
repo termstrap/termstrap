@@ -77,13 +77,17 @@ func BuildRenderTree(sel *goquery.Selection, matcher *CSSMatcher, termWidth int,
 		if parentStyle != nil {
 			text = applyTextTransform(text, parentStyle.TextTransform)
 		}
+		st := ComputedStyle{Display: DisplayInline}
+		if parentStyle != nil {
+			st.Shimmer = parentStyle.Shimmer
+			st.ShimmerHighlight = parentStyle.ShimmerHighlight
+		}
 		return &RenderNode{
 			Type:  NodeText,
 			Text:  text,
-			Style: ComputedStyle{Display: DisplayInline},
+			Style: st,
 		}
 	}
-
 	if node.Type != html.ElementNode {
 		return nil
 	}
@@ -250,17 +254,15 @@ func computeWidths(node *RenderNode, parentWidth int) {
 		borderH++
 	}
 
-	lipglossW := avail - borderH
+	lipglossW := avail
 	if lipglossW < 1 {
 		lipglossW = 1
 	}
-
 	paddingH := node.Style.PaddingLeft + node.Style.PaddingRight
-	contentW := lipglossW - paddingH
+	contentW := lipglossW - borderH - paddingH
 	if contentW < 1 {
 		contentW = 1
 	}
-
 	node.AllocatedWidth = parentWidth
 	node.BoxWidth = avail
 	node.LipglossWidth = lipglossW

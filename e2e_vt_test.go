@@ -34,7 +34,7 @@ func TestE2E_ResponsiveStackingVsSideBySide(t *testing.T) {
 		// First column (Cover & metadata table) starts at y=2, height=15 (metadata rendered as a bordered table).
 		screen.AssertBorderBox(t, 2, 2, 66, 15)
 		screen.AssertText(t, 7, 9, "Catégorie")
-		screen.AssertText(t, 37, 9, "Musiques")
+		screen.AssertText(t, 36, 9, "Musiques")
 
 		var botY70 int
 		for y := 18; y < 100; y++ {
@@ -198,9 +198,9 @@ func TestE2E_ColoredAlerts(t *testing.T) {
 		screen.AssertBgColor(t, x, 0, "25;135;84")
 	}
 
-	// Bootstrap bg-danger is 220;52;69 (#dc3445)
+	// Bootstrap bg-danger is 220;53;69 (#dc3545)
 	for x := 40; x < 80; x++ {
-		screen.AssertBgColor(t, x, 0, "220;52;69")
+		screen.AssertBgColor(t, x, 0, "220;53;69")
 	}
 }
 

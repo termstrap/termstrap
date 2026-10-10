@@ -3,8 +3,8 @@ package termstrap
 import (
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/table"
+	"charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/table"
 )
 
 // collectRows walks a <table> subtree (through thead/tbody/tfoot) and returns

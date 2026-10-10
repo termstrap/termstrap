@@ -123,8 +123,8 @@ func TestSpecificity_InlineStyleCascade(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Render failed: %v", err)
 		}
-		if !strings.Contains(out, "220;52;69") {
-			t.Errorf("expected stylesheet !important (Red: 220;52;69) to win over normal inline style, got:\n%q", out)
+		if !strings.Contains(out, "220;53;69") {
+			t.Errorf("expected stylesheet !important (Red: 220;53;69) to win over normal inline style, got:\n%q", out)
 		}
 	})
 

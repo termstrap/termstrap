@@ -5,11 +5,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/lipgloss"
-	"github.com/muesli/termenv"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/colorprofile"
 )
 
-var ansiRe = regexp.MustCompile(`\x1b\[([0-9;]*)m`)
+var ansiRe = regexp.MustCompile(`\x1b\[([0-9;:]*)m`)
 
 // cellBgStates walks a rendered line and returns, per visible cell, the glyph
 // and whether the card background is active on that cell.
@@ -26,9 +26,13 @@ func cellBgStates(line, bgCode string) []struct {
 	for i < len(line) {
 		if loc := ansiRe.FindStringIndex(line[i:]); loc != nil && loc[0] == 0 {
 			codes := ansiRe.FindStringSubmatch(line[i:])[1]
-			for _, c := range strings.Split(codes, ";") {
-				if c == "0" || c == "49" {
-					bg = false
+			if codes == "" {
+				bg = false
+			} else {
+				for _, c := range strings.Split(codes, ";") {
+					if c == "0" || c == "49" {
+						bg = false
+					}
 				}
 			}
 			if strings.Contains(codes, bgCode) {
@@ -55,7 +59,7 @@ func cellBgStates(line, bgCode string) []struct {
 // prevents the dark seams that appear where colored boxes meet when border
 // cells render on the terminal's default background.
 func TestBorderBackgroundCoversBorderBox(t *testing.T) {
-	lipgloss.SetColorProfile(termenv.TrueColor)
+	lipgloss.Writer.Profile = colorprofile.TrueColor
 
 	html := `<div class="border rounded p-2 bg-primary text-white">
   <h4 class="mb-1">CPU Load</h4>

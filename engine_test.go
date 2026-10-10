@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/colorprofile"
 	"github.com/go-scripts/termstrap/testutil"
-	"github.com/muesli/termenv"
 )
 func TestEngine_SimpleDivAndMargins(t *testing.T) {
 	html := `<div class="m-3 p-2 bg-dark text-white">Hello Termstrap</div>`
@@ -132,8 +132,8 @@ func TestEngine_ColoredAlerts(t *testing.T) {
 	if !strings.Contains(out, "48;2;255;193;7") {
 		t.Errorf("expected bg-warning ANSI color in output, got:\n%q", out)
 	}
-	// bg-danger: #dc3545 -> 48;2;220;52;69
-	if !strings.Contains(out, "48;2;220;52;69") {
+	// bg-danger: #dc3545 -> 48;2;220;53;69
+	if !strings.Contains(out, "48;2;220;53;69") {
 		t.Errorf("expected bg-danger ANSI color in output, got:\n%q", out)
 	}
 }
@@ -442,7 +442,7 @@ func TestEngine_OSC8Hyperlinks(t *testing.T) {
 }
 
 func TestEngine_WrappedLinkColor(t *testing.T) {
-	lipgloss.SetColorProfile(termenv.TrueColor)
+	lipgloss.Writer.Profile = colorprofile.TrueColor
 	html := `<div style="width: 30px;"><a class="text-success" href="https://example.com/very/long/url/that/will/definitely/wrap/across/several/lines/without/any/spaces/whatsoever">https://example.com/very/long/url/that/will/definitely/wrap/across/several/lines/without/any/spaces/whatsoever</a></div>`
 	m := New(html, WithWidth(30))
 	out, err := m.Render()

@@ -3,9 +3,9 @@ package termstrap
 import (
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/list"
-	"github.com/charmbracelet/lipgloss/tree"
+	"charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/list"
+	"charm.land/lipgloss/v2/tree"
 )
 
 // splitListItem separates an <li>'s inline/block content from any nested
