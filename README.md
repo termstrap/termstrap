@@ -154,11 +154,19 @@ Termstrap implements a subset of Bootstrap 5 CSS classes tailored for terminal g
 
 ### Borders & Shadows
 * **Borders**: `border`, `border-top`, `border-bottom`, `border-left`, `border-right`, `rounded` (rounded corners).
-* **Border styles**: `border-style: solid | double | thick | dashed | dotted | hidden`, per-side `border-*-color`, and `border-color`.
+* **Border styles**: `border-style: solid | double | thick | block | outer-half-block | inner-half-block | markdown | ascii | dashed | dotted | hidden`, per-side `border-*-color`, `border-color`.
+* **Border blends**: `border-image: #col1 #col2 ...` / `border-color-blend` smooth CIELAB gradients.
 * **Shadows**: `shadow-sm`, `shadow`, `shadow-lg`, `shadow-none` (intelligent drop shadows that adjust to available width).
 
-### Sizing
+### Sizing & Gradients
 * **Clamping**: `max-width` / `max-height` bound a block and reflow/truncate its content (cell units via `ch` map 1:1 to columns).
+* **Background Gradients**: `background: linear-gradient(#start, #mid, #end)` via CIELAB `Blend1D`.
+* **Color Functions**: `lighten(#color, %)`, `darken(#color, %)`, `complementary(#color)`.
+
+### Animations & Shimmer / Spinners
+* **Declarative Tags**: `<spinner>`, `<shimmer>`
+* **Classes & CSS**: `.spinner`, `.shimmer`, `animation: shimmer`, `animation: spinner`
+* **Model Step**: `termstrap.WithStep(step)` to advance frames dynamically.
 
 ### Flexbox Alignment
 * **Justify**: `.justify-content-start|center|end`, `justify-content: space-between`.
@@ -169,11 +177,11 @@ Termstrap implements a subset of Bootstrap 5 CSS classes tailored for terminal g
 * **Trees**: `<ul class="tree">` / `role="tree"` via `lipgloss/tree` (`├──`/`└──` connectors).
 * **Tables**: `<table>` via the `lipgloss/table` engine (boxed, header separator, per-row backgrounds like `.table-primary`).
 
-### Typography & Alignment
+### Typography & Text Decorations
 * **Text Alignment**: `text-center`, `text-start` (`text-left`), `text-end` (`text-right`).
-* **Font Weight**: `fw-bold`, `text-bold`.
-* **Decorations**: `text-decoration-underline`, `line-through` (`<s>`/`<del>`/`<strike>`), `opacity` dimming (faint).
-
+* **Font Weight**: `fw-bold`, `text-bold`, `fst-italic`, `text-italic`.
+* **Underlines**: `text-decoration-underline`, `text-decoration-style: wavy|double|dotted|dashed|solid`, `text-decoration-color: <color>`.
+* **Decorations**: `text-decoration: line-through` (`<s>`/`<del>`/`<strike>`), `text-decoration: blink` / `<blink>`, `opacity` dimming (faint).
 ### Colors & Themes
 * **Backgrounds**: `bg-primary`, `bg-secondary`, `bg-success`, `bg-danger`, `bg-warning`, `bg-info`, `bg-light`, `bg-dark`, `bg-white`, `bg-black`, `bg-muted`, `bg-body`.
 * **Text Colors**: `text-primary`, `text-secondary`, `text-success`, `text-danger`, `text-warning`, `text-info`, `text-light`, `text-dark`, `text-muted`.

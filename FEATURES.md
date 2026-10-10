@@ -139,15 +139,21 @@ Les couleurs sont prises en charge en **TrueColor 24-bit** (ou fallback ANSI 256
 - `.text-center` : Centrage du texte dans son conteneur.
 - `.text-end`, `.text-right` : Alignement à droite.
 
-### Styles de Police
+### Styles de Police & Décorations Avancées
 - `.fw-bold`, `.text-bold`, `<b>`, `<strong>` : Texte en gras.
 - `.fst-italic`, `.text-italic`, `<i>`, `<em>` : Texte en italique.
-- `.text-decoration-underline` : Texte souligné.
-- `text-decoration: line-through`, `.text-decoration-line-through`, `<s>`, `<del>`, `<strike>` : Texte barré (lipgloss `Strikethrough`).
-- `opacity: < 1` : Texte atténué (lipgloss `Faint`), pour `.text-muted`-like et `<hr>`.
+- `.text-decoration-underline` : Texte souligné (`lipgloss.UnderlineSingle`).
+- `text-decoration-style` : Variantes de soulignement ANSI :
+  - `wavy`, `curly` : Vaguelettes (`lipgloss.UnderlineCurly` / ANSI `4:3`).
+  - `double` : Double trait (`lipgloss.UnderlineDouble` / ANSI `4:2`).
+  - `dotted` : Points (`lipgloss.UnderlineDotted` / ANSI `4:4`).
+  - `dashed` : Tirets (`lipgloss.UnderlineDashed` / ANSI `4:5`).
+- `text-decoration-color: <color>` : Couleur de soulignement dédiée (`SGR 58;2;r;g;b`).
+- `text-decoration: line-through`, `.text-decoration-line-through`, `<s>`, `<del>`, `<strike>` : Texte barré (`lipgloss.Strikethrough`).
+- `text-decoration: blink`, `<blink>` : Clignotement (`lipgloss.Blink` / ANSI SGR 5).
+- `opacity: < 1` : Texte atténué (`lipgloss.Faint`), pour `.text-muted`-like et `<hr>`.
 
 Toutes ces décorations se cumulent et s'héritent sur les enfants inline.
-
 ---
 
 ## 8. Balises HTML Prises en Charge
@@ -280,20 +286,27 @@ Le moteur résout les pseudo-éléments `::before` et `::after` (ainsi que la sy
 Ces fonctionnalités s'appuient directement sur lipgloss (styles de bordure, `Place`, `JoinHorizontal`, sous-paquets `list`/`tree`/`table`).
 
 ### Styles de Bordure (`border-style`)
-- `solid` (défaut), `double`, `thick`, `dashed`, `dotted`, `hidden`.
+- `solid` (défaut), `double`, `thick`, `block`, `outer-half-block`, `inner-half-block`, `markdown`, `ascii`, `dashed`, `dotted`, `hidden`.
 - `border-width: medium|thick` ou `3px`+ promeut une bordure `solid` en `thick`.
 - Les traits `dashed`/`dotted` sont construits à partir de glyphes box-drawing.
 - `rounded` / `.rounded` reste géré (coins arrondis).
 
 ```html
 <div style="border-style: double;">double</div>
+<div style="border-style: block;">block</div>
 <div style="border-style: dashed; border-color: #0d6efd;">dashed colorée</div>
 ```
 
-### Couleurs de Bordure par Côté
+### Couleurs et Dégradés de Bordure (`border-image` / `border-color-blend`)
 - `border-top-color`, `border-right-color`, `border-bottom-color`, `border-left-color` surchargent la couleur partagée `border-color` côté par côté.
-- Utile pour les callouts/`<blockquote>` à trait latéral unique.
+- `border-image: #col1 #col2 ...` ou `border-color-blend: #col1 #col2 ...` : applique un **dégradé fluide** le long de la bordure (`lipgloss.BorderForegroundBlend`).
 
+### Dégradés d'Arrière-Plan & Fonctions de Couleur
+- **Dégradés CIELAB** : `background: linear-gradient(#start, #mid, #end)` via `lipgloss.Blend1D`.
+- **Fonctions de manipulation** :
+  - `lighten(#color, percentage%)` : Éclaircit une couleur via `lipgloss.Lighten`.
+  - `darken(#color, percentage%)` : Assombrit une couleur via `lipgloss.Darken`.
+  - `complementary(#color)` : Calcule la couleur complémentaire via `lipgloss.Complementary`.
 ### Dimensionnement (`max-width` / `max-height`)
 - `max-width` borne la largeur d'un bloc ; le contenu est re-flowé puis le bloc tronqué (lipgloss `MaxWidth`).
 - `max-height` borne la hauteur (lipgloss `MaxHeight`).
@@ -318,7 +331,42 @@ Ces fonctionnalités s'appuient directement sur lipgloss (styles de bordure, `Pl
 - `border-color` et `border-style` du `<table>` pilotent le cadre.
 
 Voir `examples/lipgloss-features/` pour une démonstration de l'ensemble.
+## 8ter. Animations & Indicateurs (Shimmer / Spinner)
 
+`termstrap` intègre nativement des indicateurs de chargement animés ("Working...") inspirés de **Oh My Pi (OMP)**.
+
+### Syntaxe HTML/CSS Déclarative
+
+```html
+<div class="border rounded p-1" style="border-color: #bd93f9;">
+  <spinner class="text-warning"></spinner>
+  <shimmer class="text-primary">Working on analysis...</shimmer>
+</div>
+```
+
+- **Balises dédiées** : `<spinner>` et `<shimmer>`.
+- **Classes CSS équivalentes** : `.spinner` et `.shimmer` sur n'importe quel élément.
+- **Propriété CSS** : `animation: shimmer` ou `animation: spinner`.
+
+### Pilotage des Frames en Go
+
+```go
+// Dans votre boucle de rafraîchissement / tick TUI :
+for step := range 50 {
+    out, _ := termstrap.New(
+        `<div><spinner class="text-info"></spinner> <shimmer>Working...</shimmer></div>`,
+        termstrap.WithWidth(60),
+        termstrap.WithStep(step), // 'step' fait avancer le shimmer et le spinner
+    ).Render()
+
+    fmt.Printf("\r\x1b[2K%s", out)
+    time.Sleep(70 * time.Millisecond)
+}
+```
+
+- **Fonctions Go autonomes** :
+  - `termstrap.Shimmer(text string, step int, opts ...ShimmerOptions) string`
+  - `termstrap.Spinner(step int, frames ...[]string) string`
 ## 9. Rendu d'Images (`<img>`)
 
 ### Formats d'Images
