@@ -48,10 +48,14 @@ func (p *CSSPreprocessor) ExtractVariables(sheet *css.Stylesheet) {
 			if strings.HasPrefix(s, "[data-bs-theme=") {
 				target := strings.TrimSuffix(strings.TrimPrefix(s, "[data-bs-theme="), "]")
 				target = strings.Trim(target, `"'`)
-				if (themeStr == "dracula" || themeStr == "tokyonight") && target == "dark" {
+				if strings.EqualFold(target, themeStr) {
 					isRootScope = true
 					break
-				} else if (themeStr == "bootstrap" || themeStr == "light") && target == "light" {
+				}
+				if themeStr == "light" && target == "light" {
+					isRootScope = true
+					break
+				} else if (themeStr == "bootstrap" || themeStr == "dark" || themeStr == "none" || themeStr == "") && target == "dark" {
 					isRootScope = true
 					break
 				}
