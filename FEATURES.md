@@ -143,6 +143,10 @@ Les couleurs sont prises en charge en **TrueColor 24-bit** (ou fallback ANSI 256
 - `.fw-bold`, `.text-bold`, `<b>`, `<strong>` : Texte en gras.
 - `.fst-italic`, `.text-italic`, `<i>`, `<em>` : Texte en italique.
 - `.text-decoration-underline` : Texte souligné.
+- `text-decoration: line-through`, `.text-decoration-line-through`, `<s>`, `<del>`, `<strike>` : Texte barré (lipgloss `Strikethrough`).
+- `opacity: < 1` : Texte atténué (lipgloss `Faint`), pour `.text-muted`-like et `<hr>`.
+
+Toutes ces décorations se cumulent et s'héritent sur les enfants inline.
 
 ---
 
@@ -155,12 +159,165 @@ Les couleurs sont prises en charge en **TrueColor 24-bit** (ou fallback ANSI 256
 | `<table>`, `<tr>`, `<th>`, `<td>` | Tableau complet avec colonnes alignées et bordures d'en-tête |
 | `<blockquote>` | Citation avec bordure latérale gauche et retrait |
 | `<code>` | Code inline sur fond sombre avec texte contrasté |
-| `<pre>` | Bloc de code préformaté préservant l'indentation |
+| `<pre>` | Bloc de code préformaté préservant l'indentation, avec **coloration syntaxique** automatique |
 | `<hr>` | Ligne horizontale de séparation |
 | `<ul>`, `<ol>`, `<li>` | Listes ordonnées et non-ordonnées |
 | `<img>` | Image rendue en demi-blocs ANSI ou transmise en overlay natif |
 
+### Coloration Syntaxique des Blocs de Code
+
+Les blocs `<pre>` sont colorés syntaxiquement via [chroma](https://github.com/alecthomas/chroma) (activé par défaut).
+
+- **Intégration la plus simple** (convention HTML/Markdown GitHub) :
+
+  ```html
+  <pre><code class="language-go">package main
+  func main() {}</code></pre>
+  ```
+
+  Le préfixe de classe `language-xxx` (ou `lang-xxx`) sur le `<code>` interne — ou sur le `<pre>` — fixe le langage.
+
+- **Détection automatique** : sans classe de langage, le langage est déduit du contenu (`lexers.Analyse`). Un `<pre><code>…</code></pre>` nu est donc coloré automatiquement.
+
+- **Couleurs pilotées par CSS (charte du thème)** : la palette de coloration est définie par des variables CSS `--ts-code-*`. Les défauts (dans `css/termstrap.css`) s'accordent aux couleurs sémantiques Bootstrap sur le fond sombre du `<pre>` ; chaque thème (`dracula`, `tokyonight`) surcharge ces variables selon sa charte graphique dans son propre `css/theme-*.css`. On peut aussi les surcharger via `WithStylesheets(...)` :
+
+  ```css
+  :root {
+    /* Surfaces des blocs de code */
+    --ts-code-bg: #212529;         /* fond du bloc <pre>            */
+    --ts-code-inline-bg: #343a40;  /* fond du <code> inline         */
+    --ts-code-inline-fg: #ffc107;  /* texte du <code> inline        */
+
+    /* Couleurs des tokens (coloration du <pre>) */
+    --ts-code-name: #f8f9fa;       /* identifiants / texte par défaut (= couleur du <pre>) */
+    --ts-code-keyword: #e685b5;    /* mots-clés                     */
+    --ts-code-function: #6ea8fe;   /* noms de fonctions / méthodes  */
+    --ts-code-type: #6edff6;       /* types / classes               */
+    --ts-code-builtin: #c29ffa;    /* builtins                      */
+    --ts-code-string: #75b798;     /* chaînes                       */
+    --ts-code-number: #ffda6a;     /* nombres                       */
+    --ts-code-comment: #9aa0a6;    /* commentaires                  */
+    --ts-code-operator: #dee2e6;   /* opérateurs / ponctuation      */
+    --ts-code-variable: #f8f9fa;   /* variables / propriétés        */
+    --ts-code-constant: #c29ffa;   /* constantes / symboles         */
+    --ts-code-tag: #e685b5;        /* balises markup (HTML/XML)     */
+    --ts-code-attribute: #6ea8fe;  /* attributs / décorateurs       */
+    --ts-code-regex: #63e6be;      /* expressions régulières        */
+    --ts-code-escape: #ffbf69;     /* séquences d'échappement / interpolation */
+    --ts-code-deleted: #ea868f;    /* suppressions diff / erreurs   */
+    --ts-code-inserted: #75b798;   /* insertions diff               */
+    --ts-code-heading: #6ea8fe;    /* titres markup                 */
+  }
+  ```
+
+  `--ts-code-name` sert aussi de couleur de texte par défaut du `<pre>`. Toute variable non surchargée retombe sur le défaut Bootstrap (côté Go également, donc la coloration fonctionne même sans CSS).
+
+- **Style chroma imposé (échappatoire)** : `WithSyntaxTheme("monokai")` force un style chroma nommé (`github-dark`, `nord`, `catppuccin-mocha`, `dracula`, …) et court-circuite les variables CSS.
+
+- **Désactivation** : `WithSyntaxHighlight(false)`.
+
+Les formateurs terminaux n'émettent que des couleurs d'avant-plan ; l'arrière-plan du bloc `<pre>` est préservé. La profondeur de couleur suit `WithColorMode` (TrueColor / 256 / 16).
+
+- **Chrome du document piloté par CSS** : les surfaces non-code suivent la même logique de variables `--ts-*`, surchargées par thème et par `WithStylesheets(...)` :
+
+  ```css
+  :root {
+    --ts-link-color: #6ea8fe;        /* couleur des liens <a>            */
+    --ts-hr-color: #6c757d;          /* trait horizontal <hr>            */
+    --ts-blockquote-color: #adb5bd;  /* texte des <blockquote>           */
+    --ts-blockquote-border: #6c757d; /* barre latérale des <blockquote>  */
+  }
+  ```
+
+- **Exemples** :
+  - `examples/syntax/` — bloc multi-langages + diff (option `-theme`).
+  - `examples/syntax-themes/` — même document rendu sur chaque thème pour comparer les chartes (code, liens, `<hr>`, `<blockquote>`).
+  - `examples/syntax-custom/` — palette entièrement personnalisée via `WithStylesheets(...)`, sans thème (base Bootstrap).
+
 ---
+
+### Hiérarchie des Titres (`<h1>`…`<h6>`)
+
+Un terminal n'a pas de `font-size` : TermStrap différencie les niveaux par d'autres leviers, tous pilotés par CSS.
+
+- **Échelle de couleur par niveau** : de `--ts-heading-1` (le plus clair) à `--ts-heading-6` (le plus atténué), surchargée par chaque thème selon sa charte (accent sur `h1`).
+- **Graisse / style** : `h1`–`h4` en gras, `h5`/`h6` en italique.
+- **Marqueurs Markdown** (par défaut) : chaque titre est préfixé par `#`…`######` via `h1::before`…`h6::before`, dans la teinte atténuée `--ts-heading-rule`. Désactivable en surchargeant `content: none`.
+- **`text-transform`** (nouveau dans le moteur) : `uppercase` / `lowercase` / `capitalize`, utilisable sur n'importe quelle balise.
+
+  ```css
+  :root {
+    --ts-heading-1: #f8f9fa;  /* titre principal, le plus clair */
+    --ts-heading-6: #868e96;  /* le plus atténué                */
+    --ts-heading-rule: #495057; /* trait optionnel sous un titre */
+  }
+  ```
+
+Différenciation plus marquée en opt-in (majuscules + trait `border-bottom`), voir `examples/headings/` (`-enhanced`) :
+
+  ```css
+  h1, h2 {
+    text-transform: uppercase;
+    border-bottom: 1px solid;
+    border-color: var(--ts-heading-rule) !important;
+  }
+  ```
+
+### Pseudo-éléments `::before` / `::after` et `content`
+
+Le moteur résout les pseudo-éléments `::before` et `::after` (ainsi que la syntaxe héritée `:before`/`:after`) et injecte leur `content` comme texte inline, avant/après le contenu de l'élément.
+
+- La propriété `content` accepte les chaînes (`"— "`) et décode les échappements CSS unicode (`"\2014\00a0"`, `"\00bb"`). `content: none` / `normal` ou les formes fonctionnelles non supportées (`attr()`, `counters()`) ne génèrent rien.
+- Le pseudo-élément hérite des propriétés typographiques de l'élément (graisse, italique, couleur) ; ses propres déclarations (ex. `color`) priment.
+- Alimente nativement les composants Bootstrap qui en dépendent, p. ex. `.blockquote-footer::before { content: "— "; }`, et les marqueurs Markdown des titres.
+
+  ```css
+  .note::before { content: "» "; color: #6c757d; }
+  ```
+
+## 8bis. Bordures, Dimensionnement, Flexbox, Listes & Tableaux
+
+Ces fonctionnalités s'appuient directement sur lipgloss (styles de bordure, `Place`, `JoinHorizontal`, sous-paquets `list`/`tree`/`table`).
+
+### Styles de Bordure (`border-style`)
+- `solid` (défaut), `double`, `thick`, `dashed`, `dotted`, `hidden`.
+- `border-width: medium|thick` ou `3px`+ promeut une bordure `solid` en `thick`.
+- Les traits `dashed`/`dotted` sont construits à partir de glyphes box-drawing.
+- `rounded` / `.rounded` reste géré (coins arrondis).
+
+```html
+<div style="border-style: double;">double</div>
+<div style="border-style: dashed; border-color: #0d6efd;">dashed colorée</div>
+```
+
+### Couleurs de Bordure par Côté
+- `border-top-color`, `border-right-color`, `border-bottom-color`, `border-left-color` surchargent la couleur partagée `border-color` côté par côté.
+- Utile pour les callouts/`<blockquote>` à trait latéral unique.
+
+### Dimensionnement (`max-width` / `max-height`)
+- `max-width` borne la largeur d'un bloc ; le contenu est re-flowé puis le bloc tronqué (lipgloss `MaxWidth`).
+- `max-height` borne la hauteur (lipgloss `MaxHeight`).
+- Les unités cellulaires (`ch`) mappent 1:1 sur les colonnes ; `px`/`rem` suivent la conversion habituelle (1 cellule ≈ 8px).
+
+### Flexbox (`justify-content` / `align-items`)
+- `justify-content`: `flex-start` (défaut), `center`, `flex-end`, et placement via `Place` lorsque la rangée est plus étroite que son conteneur.
+- `align-items`: `stretch` (défaut, égalise les hauteurs), `center`, `flex-end`, `flex-start` — positionne les colonnes de hauteurs inégales sur l'axe transverse.
+- Classes Bootstrap reconnues : `.justify-content-*`, `.align-items-*`.
+
+### Listes Énumérées (`<ul>` / `<ol>`)
+- Rendues via `lipgloss/list` avec indentation des sous-listes imbriquées.
+- `list-style-type` : `disc`/`circle`/`square` (puces), `decimal` (défaut `<ol>`), `lower-alpha`/`upper-alpha`, `lower-roman`/`upper-roman`.
+- `list-style: none` supprime les marqueurs.
+
+### Arbres (`<ul class="tree">` / `role="tree"`)
+- Rendus via `lipgloss/tree` avec connecteurs `├──` / `└──`, sans nœud racine vide.
+
+### Tableaux (`<table>`)
+- Rendus via le moteur `lipgloss/table` : cadre externe, séparateur d'en-tête, sans filets de colonnes internes (look Bootstrap épuré).
+- Couleurs de ligne préservées (`background-color` sur `<tr>`, classes `.table-primary`, …).
+- `border-color` et `border-style` du `<table>` pilotent le cadre.
+
+Voir `examples/lipgloss-features/` pour une démonstration de l'ensemble.
 
 ## 9. Rendu d'Images (`<img>`)
 

@@ -15,6 +15,7 @@
 * 📐 **Responsive Bootstrap Grid**: Full 12-column grid (`.row`, `.col-*`, `.col-md-*`), auto-columns, nested multi-tier rows, and automatic responsive stacking based on terminal width.
 * 🎨 **Universal Box Model & Utility Classes**: Margins (`m-0` to `m-5`), padding (`p-0` to `p-5`), borders (`border`, `rounded`), text alignment (`text-center`, `text-end`), box shadows (`shadow-sm`, `shadow-lg`), and TrueColor backgrounds/foregrounds (`bg-primary`, `text-success`) applicable to **any HTML tag**.
 * 🌐 **Pure HTML Support & Custom CSS**: Native rendering for `<table>`, `<h1>`-`<h6>`, `<blockquote>`, `<pre>`, `<code>`, `<hr>`, and external stylesheets via `WithStylesheets(...)`.
+* 🌈 **Syntax Highlighting**: `<pre>` code blocks are colorized via [chroma](https://github.com/alecthomas/chroma). Set the language with `<code class="language-go">` or let it auto-detect. The palette is driven by `--ts-code-*` CSS variables — defaults match Bootstrap, and each theme overrides them per its charter; or force a chroma style with `WithSyntaxTheme(...)` / disable via `WithSyntaxHighlight(false)`.
 * 🖼️ **Terminal Graphics Engine**:
   * Auto-detection & fallback: **Kitty Graphics**, **iTerm2 Inline Images**, **Sixel**, and universal **Half-Block Unicode (`▄`/`▀`)**.
   * **Color Modes**: TrueColor (24-bit), ANSI 256 colors, and ANSI 16 colors with palette quantization.
@@ -153,11 +154,25 @@ Termstrap implements a subset of Bootstrap 5 CSS classes tailored for terminal g
 
 ### Borders & Shadows
 * **Borders**: `border`, `border-top`, `border-bottom`, `border-left`, `border-right`, `rounded` (rounded corners).
+* **Border styles**: `border-style: solid | double | thick | dashed | dotted | hidden`, per-side `border-*-color`, and `border-color`.
 * **Shadows**: `shadow-sm`, `shadow`, `shadow-lg`, `shadow-none` (intelligent drop shadows that adjust to available width).
+
+### Sizing
+* **Clamping**: `max-width` / `max-height` bound a block and reflow/truncate its content (cell units via `ch` map 1:1 to columns).
+
+### Flexbox Alignment
+* **Justify**: `.justify-content-start|center|end`, `justify-content: space-between`.
+* **Align**: `.align-items-start|center|end`, `align-items: stretch` (default equalizes column heights).
+
+### Lists, Trees & Tables
+* **Lists**: `<ul>`/`<ol>` via `lipgloss/list`; `list-style-type: disc|circle|square|decimal|lower-alpha|upper-alpha|lower-roman|upper-roman`, `list-style: none`.
+* **Trees**: `<ul class="tree">` / `role="tree"` via `lipgloss/tree` (`├──`/`└──` connectors).
+* **Tables**: `<table>` via the `lipgloss/table` engine (boxed, header separator, per-row backgrounds like `.table-primary`).
 
 ### Typography & Alignment
 * **Text Alignment**: `text-center`, `text-start` (`text-left`), `text-end` (`text-right`).
 * **Font Weight**: `fw-bold`, `text-bold`.
+* **Decorations**: `text-decoration-underline`, `line-through` (`<s>`/`<del>`/`<strike>`), `opacity` dimming (faint).
 
 ### Colors & Themes
 * **Backgrounds**: `bg-primary`, `bg-secondary`, `bg-success`, `bg-danger`, `bg-warning`, `bg-info`, `bg-light`, `bg-dark`, `bg-white`, `bg-black`, `bg-muted`, `bg-body`.

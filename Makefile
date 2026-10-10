@@ -124,8 +124,9 @@ test-deferred:
 
 # --- Examples ---
 
-EXAMPLES_LOCAL  = breakpoints styling nested borders shadows image/local image/three-columns nested-no-md
+# Auto-detect all runnable examples containing a main.go file
 EXAMPLES_NET    = . image/detect image/formats image/grid image/markdown image/protocols
+EXAMPLES_LOCAL  = $(shell find examples -mindepth 2 -maxdepth 3 -type f -name "main.go" | sed 's|^examples/||; s|/main.go$$||' | grep -v -E '^(\.|image/detect|image/formats|image/grid|image/markdown|image/protocols)$$' | sort)
 EXAMPLES_ALL    = $(EXAMPLES_LOCAL) $(EXAMPLES_NET)
 
 examples: examples-local examples-network
@@ -230,7 +231,7 @@ help:
 	@printf '  $(C_CYAN)make ci$(C_RESET)                  Full CI pipeline: build + vet + test           \n'
 	@printf '  $(C_CYAN)make clean$(C_RESET)               Remove generated files (cover.out, cover.html)\n'
 	@printf '\n'
-	@printf '  $(C_DIM)Available examples: breakpoints, styling, nested, borders, shadows,$(C_RESET)\n'
-	@printf '  $(C_DIM)image/local, image/three-columns, image/detect, image/formats, image/grid,$(C_RESET)\n'
-	@printf '  $(C_DIM)image/markdown, image/protocols$(C_RESET)\n'
+	@printf '  $(C_DIM)Available examples: breakpoints, styling, nested, borders, shadows, spacing,$(C_RESET)\n'
+	@printf '  $(C_DIM)custom-css, bootstrap, media-queries, image/local, image/three-columns,$(C_RESET)\n'
+	@printf '  $(C_DIM)image/detect, image/formats, image/grid, image/markdown, image/protocols$(C_RESET)\n'
 	@printf '\n'
