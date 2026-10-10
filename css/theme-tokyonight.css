@@ -1,94 +1,183 @@
-/* Tokyo Night Theme Colors */
+/* Tokyo Night Theme Colors (Complete Bootstrap 5 Variable Overrides) */
+:root,
+[data-bs-theme=tokyonight] {
+  /* 1. Core Brand Colors */
+  --bs-blue: #7aa2f7;
+  --bs-indigo: #bb9af7;
+  --bs-purple: #9d7cd8;
+  --bs-pink: #f7768e;
+  --bs-red: #f7768e;
+  --bs-orange: #ff9e64;
+  --bs-yellow: #e0af68;
+  --bs-green: #9ece6a;
+  --bs-teal: #73daca;
+  --bs-cyan: #7dcfff;
+  --bs-black: #15161e;
+  --bs-white: #c0caf5;
+  --bs-gray: #565f89;
+  --bs-gray-dark: #24283b;
+
+  /* 2. Theme Semantic Palette */
+  --bs-primary: #7aa2f7;
+  --bs-secondary: #414868;
+  --bs-success: #9ece6a;
+  --bs-info: #7dcfff;
+  --bs-warning: #e0af68;
+  --bs-danger: #f7768e;
+  --bs-light: #cfc9c2;
+  --bs-dark: #16161e;
+
+  /* 3. RGB Components (Used by RGBA utility classes) */
+  --bs-primary-rgb: 121, 162, 247;
+  --bs-secondary-rgb: 65, 72, 104;
+  --bs-success-rgb: 158, 206, 105;
+  --bs-info-rgb: 125, 207, 255;
+  --bs-warning-rgb: 224, 175, 104;
+  --bs-danger-rgb: 247, 118, 142;
+  --bs-light-rgb: 207, 201, 194;
+  --bs-dark-rgb: 22, 22, 30;
+  --bs-white-rgb: 192, 202, 245;
+  --bs-black-rgb: 21, 22, 30;
+
+  /* 4. Canvas & Typography */
+  --bs-body-color: #c0caf5;
+  --bs-body-color-rgb: 192, 202, 245;
+  --bs-body-bg: #1a1b26;
+  --bs-body-bg-rgb: 26, 27, 38;
+  --bs-emphasis-color: #ffffff;
+  --bs-secondary-color: #a9b1d6;
+  --bs-secondary-bg: #24283b;
+  --bs-tertiary-color: #565f89;
+  --bs-tertiary-bg: #1f2335;
+  --bs-border-color: #414868;
+  --bs-heading-color: #7aa2f7;
+  --bs-link-color: #7dcfff;
+  --bs-link-hover-color: #bb9af7;
+  --bs-code-color: #ff9e64;
+  --bs-highlight-bg: #e0af68;
+  --bs-highlight-color: #1a1b26;
+
+  /* Syntax highlighting (Tokyo Night charter) */
+  --ts-code-bg: #1a1b26;
+  --ts-code-inline-bg: #24283b;
+  --ts-code-inline-fg: #e0af68;
+  --ts-code-name: #c0caf5;
+  --ts-code-keyword: #bb9af7;
+  --ts-code-function: #7aa2f7;
+  --ts-code-type: #2ac3de;
+  --ts-code-builtin: #ff9e64;
+  --ts-code-string: #9ece6a;
+  --ts-code-number: #ff9e64;
+  --ts-code-comment: #565f89;
+  --ts-code-operator: #89ddff;
+  --ts-code-variable: #c0caf5;
+  --ts-code-constant: #ff9e64;
+  --ts-code-tag: #f7768e;
+  --ts-code-attribute: #7dcfff;
+  --ts-code-regex: #b4f9f8;
+  --ts-code-escape: #ff9e64;
+  --ts-code-deleted: #f7768e;
+  --ts-code-inserted: #9ece6a;
+  --ts-code-heading: #7aa2f7;
+
+  /* Document chrome surfaces */
+  --ts-link-color: #7dcfff;
+  --ts-hr-color: #565f89;
+  --ts-blockquote-color: #565f89;
+  --ts-blockquote-border: #7aa2f7;
+
+  /* Heading hierarchy (Tokyo Night charter) */
+  --ts-heading-1: #7aa2f7;
+  --ts-heading-2: #c0caf5;
+  --ts-heading-3: #a9b1d6;
+  --ts-heading-4: #828bb8;
+  --ts-heading-5: #6b7394;
+  --ts-heading-6: #565f89;
+  --ts-heading-rule: #414868;
+
+  /* 5. Text Emphasis Variants */
+  --bs-primary-text-emphasis: #7aa2f7;
+  --bs-secondary-text-emphasis: #a9b1d6;
+  --bs-success-text-emphasis: #9ece6a;
+  --bs-info-text-emphasis: #7dcfff;
+  --bs-warning-text-emphasis: #e0af68;
+  --bs-danger-text-emphasis: #f7768e;
+  --bs-light-text-emphasis: #cfc9c2;
+  --bs-dark-text-emphasis: #565f89;
+
+  /* 6. Subtle Backgrounds (Used by alerts, cards, subtle badges) */
+  --bs-primary-bg-subtle: #24283b;
+  --bs-secondary-bg-subtle: #1f2335;
+  --bs-success-bg-subtle: #1c2e28;
+  --bs-info-bg-subtle: #192a38;
+  --bs-warning-bg-subtle: #2f281e;
+  --bs-danger-bg-subtle: #2d1e27;
+  --bs-light-bg-subtle: #24283b;
+  --bs-dark-bg-subtle: #16161e;
+
+  /* 7. Subtle Borders */
+  --bs-primary-border-subtle: #3d59a1;
+  --bs-secondary-border-subtle: #414868;
+  --bs-success-border-subtle: #485e30;
+  --bs-info-border-subtle: #385973;
+  --bs-warning-border-subtle: #59492b;
+  --bs-danger-border-subtle: #612f38;
+  --bs-light-border-subtle: #414868;
+  --bs-dark-border-subtle: #24283b;
+}
+
+/* 8. Component Overrides */
 blockquote {
-  color: #565f89;
+  color: var(--ts-blockquote-color) !important;
+  border-color: var(--ts-blockquote-border) !important;
 }
 
 code {
-  background-color: #24283b;
-  color: #e0af68;
+  background-color: var(--ts-code-inline-bg) !important;
+  color: var(--ts-code-inline-fg) !important;
 }
 
 pre {
-  background-color: #1a1b26;
-  color: #c0caf5;
-}
-
-.bg-primary {
-  background-color: #7aa2f7;
-  color: #1a1b26;
-}
-
-.bg-secondary {
-  background-color: #414868;
-  color: #c0caf5;
-}
-
-.bg-success {
-  background-color: #9ece6a;
-  color: #1a1b26;
-}
-
-.bg-danger {
-  background-color: #f7768e;
-  color: #1a1b26;
-}
-
-.bg-warning {
-  background-color: #e0af68;
-  color: #1a1b26;
-}
-
-.bg-info {
-  background-color: #7dcfff;
-  color: #1a1b26;
-}
-
-.bg-light {
-  background-color: #cfc9c2;
-  color: #1a1b26;
-}
-
-.bg-dark {
-  background-color: #16161e;
-  color: #c0caf5;
+  background-color: var(--ts-code-bg) !important;
+  color: var(--ts-code-name) !important;
 }
 
 .text-primary {
-  color: #7aa2f7;
+  color: #7aa2f7 !important;
 }
 
 .text-secondary {
-  color: #565f89;
+  color: #565f89 !important;
 }
 
 .text-success {
-  color: #9ece6a;
+  color: #9ece6a !important;
 }
 
 .text-danger {
-  color: #f7768e;
+  color: #f7768e !important;
 }
 
 .text-warning {
-  color: #e0af68;
+  color: #e0af68 !important;
 }
 
 .text-info {
-  color: #7dcfff;
+  color: #7dcfff !important;
 }
 
 .text-light {
-  color: #c0caf5;
+  color: #cfc9c2 !important;
 }
 
 .text-dark {
-  color: #15161e;
+  color: #16161e !important;
 }
 
 .text-white {
-  color: #ffffff;
+  color: #ffffff !important;
 }
 
 .text-muted {
-  color: #565f89;
+  color: #565f89 !important;
 }

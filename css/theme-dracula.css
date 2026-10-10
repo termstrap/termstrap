@@ -1,94 +1,183 @@
-/* Dracula Theme Colors */
+/* Dracula Theme Colors (Complete Bootstrap 5 Variable Overrides) */
+:root,
+[data-bs-theme=dracula] {
+  /* 1. Core Brand Colors */
+  --bs-blue: #8be9fd;
+  --bs-indigo: #bd93f9;
+  --bs-purple: #bd93f9;
+  --bs-pink: #ff79c6;
+  --bs-red: #ff5555;
+  --bs-orange: #ffb86c;
+  --bs-yellow: #f1fa8c;
+  --bs-green: #50fa7b;
+  --bs-teal: #8be9fd;
+  --bs-cyan: #8be9fd;
+  --bs-black: #1e1f29;
+  --bs-white: #f8f8f2;
+  --bs-gray: #6272a4;
+  --bs-gray-dark: #44475a;
+
+  /* 2. Theme Semantic Palette */
+  --bs-primary: #bd93f9;
+  --bs-secondary: #6272a4;
+  --bs-success: #50fa7b;
+  --bs-info: #8be9fd;
+  --bs-warning: #f1fa8c;
+  --bs-danger: #ff5555;
+  --bs-light: #f8f8f2;
+  --bs-dark: #21222c;
+
+  /* 3. RGB Components (Used by RGBA utility classes) */
+  --bs-primary-rgb: 189, 147, 249;
+  --bs-secondary-rgb: 98, 114, 164;
+  --bs-success-rgb: 80, 250, 123;
+  --bs-info-rgb: 139, 233, 253;
+  --bs-warning-rgb: 241, 250, 140;
+  --bs-danger-rgb: 255, 85, 85;
+  --bs-light-rgb: 248, 248, 242;
+  --bs-dark-rgb: 33, 34, 44;
+  --bs-white-rgb: 248, 248, 242;
+  --bs-black-rgb: 30, 31, 41;
+
+  /* 4. Canvas & Typography */
+  --bs-body-color: #f8f8f2;
+  --bs-body-color-rgb: 248, 248, 242;
+  --bs-body-bg: #282a36;
+  --bs-body-bg-rgb: 40, 42, 54;
+  --bs-emphasis-color: #ffffff;
+  --bs-secondary-color: #bd93f9;
+  --bs-secondary-bg: #44475a;
+  --bs-tertiary-color: #6272a4;
+  --bs-tertiary-bg: #21222c;
+  --bs-border-color: #6272a4;
+  --bs-heading-color: #bd93f9;
+  --bs-link-color: #8be9fd;
+  --bs-link-hover-color: #ff79c6;
+  --bs-code-color: #ff79c6;
+  --bs-highlight-bg: #f1fa8c;
+  --bs-highlight-color: #282a36;
+
+  /* Syntax highlighting (Dracula charter) */
+  --ts-code-bg: #282a36;
+  --ts-code-inline-bg: #44475a;
+  --ts-code-inline-fg: #f1fa8c;
+  --ts-code-name: #f8f8f2;
+  --ts-code-keyword: #ff79c6;
+  --ts-code-function: #50fa7b;
+  --ts-code-type: #8be9fd;
+  --ts-code-builtin: #bd93f9;
+  --ts-code-string: #f1fa8c;
+  --ts-code-number: #bd93f9;
+  --ts-code-comment: #6272a4;
+  --ts-code-operator: #ff79c6;
+  --ts-code-variable: #f8f8f2;
+  --ts-code-constant: #bd93f9;
+  --ts-code-tag: #ff79c6;
+  --ts-code-attribute: #50fa7b;
+  --ts-code-regex: #ff5555;
+  --ts-code-escape: #ffb86c;
+  --ts-code-deleted: #ff5555;
+  --ts-code-inserted: #50fa7b;
+  --ts-code-heading: #bd93f9;
+
+  /* Document chrome surfaces */
+  --ts-link-color: #8be9fd;
+  --ts-hr-color: #6272a4;
+  --ts-blockquote-color: #6272a4;
+  --ts-blockquote-border: #bd93f9;
+
+  /* Heading hierarchy (Dracula charter) */
+  --ts-heading-1: #bd93f9;
+  --ts-heading-2: #f8f8f2;
+  --ts-heading-3: #d8d8d2;
+  --ts-heading-4: #a0a0b0;
+  --ts-heading-5: #7a7a96;
+  --ts-heading-6: #6272a4;
+  --ts-heading-rule: #44475a;
+
+  /* 5. Text Emphasis Variants */
+  --bs-primary-text-emphasis: #bd93f9;
+  --bs-secondary-text-emphasis: #6272a4;
+  --bs-success-text-emphasis: #50fa7b;
+  --bs-info-text-emphasis: #8be9fd;
+  --bs-warning-text-emphasis: #f1fa8c;
+  --bs-danger-text-emphasis: #ff5555;
+  --bs-light-text-emphasis: #f8f8f2;
+  --bs-dark-text-emphasis: #6272a4;
+
+  /* 6. Subtle Backgrounds (Used by alerts, cards, subtle badges) */
+  --bs-primary-bg-subtle: #38304a;
+  --bs-secondary-bg-subtle: #2d3345;
+  --bs-success-bg-subtle: #243c31;
+  --bs-info-bg-subtle: #233b47;
+  --bs-warning-bg-subtle: #3f3e28;
+  --bs-danger-bg-subtle: #412429;
+  --bs-light-bg-subtle: #44475a;
+  --bs-dark-bg-subtle: #1e1f29;
+
+  /* 7. Subtle Borders */
+  --bs-primary-border-subtle: #6c548f;
+  --bs-secondary-border-subtle: #6272a4;
+  --bs-success-border-subtle: #366b49;
+  --bs-info-border-subtle: #467687;
+  --bs-warning-border-subtle: #797c45;
+  --bs-danger-border-subtle: #8a343b;
+  --bs-light-border-subtle: #6272a4;
+  --bs-dark-border-subtle: #44475a;
+}
+
+/* 8. Component Overrides */
 blockquote {
-  color: #6272a4;
+  color: var(--ts-blockquote-color) !important;
+  border-color: var(--ts-blockquote-border) !important;
 }
 
 code {
-  background-color: #44475a;
-  color: #f1fa8c;
+  background-color: var(--ts-code-inline-bg) !important;
+  color: var(--ts-code-inline-fg) !important;
 }
 
 pre {
-  background-color: #282a36;
-  color: #f8f8f2;
-}
-
-.bg-primary {
-  background-color: #bd93f9;
-  color: #282a36;
-}
-
-.bg-secondary {
-  background-color: #6272a4;
-  color: #f8f8f2;
-}
-
-.bg-success {
-  background-color: #50fa7b;
-  color: #282a36;
-}
-
-.bg-danger {
-  background-color: #ff5555;
-  color: #282a36;
-}
-
-.bg-warning {
-  background-color: #ffb86c;
-  color: #282a36;
-}
-
-.bg-info {
-  background-color: #8be9fd;
-  color: #282a36;
-}
-
-.bg-light {
-  background-color: #f8f8f2;
-  color: #282a36;
-}
-
-.bg-dark {
-  background-color: #21222c;
-  color: #f8f8f2;
+  background-color: var(--ts-code-bg) !important;
+  color: var(--ts-code-name) !important;
 }
 
 .text-primary {
-  color: #bd93f9;
+  color: #bd93f9 !important;
 }
 
 .text-secondary {
-  color: #6272a4;
+  color: #6272a4 !important;
 }
 
 .text-success {
-  color: #50fa7b;
+  color: #50fa7b !important;
 }
 
 .text-danger {
-  color: #ff5555;
+  color: #ff5555 !important;
 }
 
 .text-warning {
-  color: #ffb86c;
+  color: #f1fa8c !important;
 }
 
 .text-info {
-  color: #8be9fd;
+  color: #8be9fd !important;
 }
 
 .text-light {
-  color: #f8f8f2;
+  color: #f8f8f2 !important;
 }
 
 .text-dark {
-  color: #282a36;
+  color: #21222c !important;
 }
 
 .text-white {
-  color: #ffffff;
+  color: #ffffff !important;
 }
 
 .text-muted {
-  color: #6272a4;
+  color: #6272a4 !important;
 }

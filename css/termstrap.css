@@ -1,0 +1,667 @@
+/* TermStrap Terminal Custom Rules & Overwrites on top of Bootstrap */
+
+/* 1. HTML Tag Defaults (Terminal User-Agent) */
+div,
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+ul,
+ol,
+li,
+table,
+tr,
+blockquote,
+hr,
+pre {
+ display: block;
+}
+
+span,
+a,
+strong,
+b,
+em,
+i,
+code,
+img {
+ display: inline;
+}
+
+a {
+ text-decoration: underline;
+ color: var(--ts-link-color) !important;
+}
+
+strong,
+b {
+ font-weight: bold;
+}
+
+em,
+i {
+ font-style: italic;
+}
+
+h1 {
+ font-weight: bold;
+ color: var(--ts-heading-1) !important;
+ margin-bottom: 1;
+}
+
+h2 {
+ font-weight: bold;
+ color: var(--ts-heading-2) !important;
+ margin-top: 1;
+ margin-bottom: 1;
+}
+
+h3 {
+ font-weight: bold;
+ color: var(--ts-heading-3) !important;
+ margin-top: 1;
+ margin-bottom: 1;
+}
+
+h4 {
+ font-weight: bold;
+ color: var(--ts-heading-4) !important;
+ margin-bottom: 1;
+}
+
+h5 {
+ font-weight: bold;
+ font-style: italic;
+ color: var(--ts-heading-5) !important;
+}
+
+h6 {
+ font-style: italic;
+ color: var(--ts-heading-6) !important;
+}
+
+/* Markdown-style level markers (#, ##, ... ######) before each heading.
+   The marker is muted via --ts-heading-rule so the title text stays dominant. */
+h1::before {
+ content: "# ";
+ color: var(--ts-heading-rule) !important;
+}
+
+h2::before {
+ content: "## ";
+ color: var(--ts-heading-rule) !important;
+}
+
+h3::before {
+ content: "### ";
+ color: var(--ts-heading-rule) !important;
+}
+
+h4::before {
+ content: "#### ";
+ color: var(--ts-heading-rule) !important;
+}
+
+h5::before {
+ content: "##### ";
+ color: var(--ts-heading-rule) !important;
+}
+
+h6::before {
+ content: "###### ";
+ color: var(--ts-heading-rule) !important;
+}
+
+p {
+ margin-bottom: 1;
+}
+
+hr {
+ margin-top: 1;
+ margin-bottom: 1;
+ border-color: var(--ts-hr-color) !important;
+}
+
+ul,
+ol {
+ margin-bottom: 1;
+}
+
+/* 2. Terminal Canvas: Transparent root body (never flood dark terminal with white) */
+body {
+ background-color: transparent !important;
+ color: inherit !important;
+}
+
+/* 3. Terminal Blockquotes, Code & Pre */
+blockquote {
+ border-left: 1px solid currentColor !important;
+ border-color: var(--ts-blockquote-border) !important;
+ color: var(--ts-blockquote-color) !important;
+ padding-left: 2 !important;
+ margin-top: 1 !important;
+ margin-bottom: 1 !important;
+}
+
+code {
+ background-color: var(--ts-code-inline-bg);
+ color: var(--ts-code-inline-fg);
+ padding: 0 1;
+}
+
+pre {
+ background-color: var(--ts-code-bg);
+ color: var(--ts-code-name);
+ padding: 0 1;
+ margin-top: 1;
+ margin-bottom: 1;
+}
+
+/* Terminal rendering palette. Every property below is a CSS custom property so
+   the look of code/inline blocks can be tuned without touching Go. Defaults
+   align with Bootstrap's semantic colors on the dark <pre> background; themes
+   override them in their own stylesheet (css/theme-*.css) to match their
+   charter, and users can override via WithStylesheets(...). */
+:root {
+ /* Code block & inline <code> surfaces */
+ --ts-code-bg: #212529;
+ --ts-code-inline-bg: #343a40;
+ --ts-code-inline-fg: #ffc107;
+
+ /* Syntax token colors (<pre> highlighting) */
+ --ts-code-name: #f8f9fa;
+ --ts-code-keyword: #e685b5;
+ --ts-code-function: #6ea8fe;
+ --ts-code-type: #6edff6;
+ --ts-code-builtin: #c29ffa;
+ --ts-code-string: #75b798;
+ --ts-code-number: #ffda6a;
+ --ts-code-comment: #9aa0a6;
+ --ts-code-operator: #dee2e6;
+ --ts-code-variable: #f8f9fa;
+ --ts-code-constant: #c29ffa;
+ --ts-code-tag: #e685b5;
+ --ts-code-attribute: #6ea8fe;
+ --ts-code-regex: #63e6be;
+ --ts-code-escape: #ffbf69;
+ --ts-code-deleted: #ea868f;
+ --ts-code-inserted: #75b798;
+ --ts-code-heading: #6ea8fe;
+
+ /* Document chrome surfaces */
+ --ts-link-color: #6ea8fe;
+ --ts-hr-color: #6c757d;
+ --ts-blockquote-color: #adb5bd;
+ --ts-blockquote-border: #6c757d;
+
+ /* Heading hierarchy (brightest h1 -> muted h6; no font-size in a terminal) */
+ --ts-heading-1: #f8f9fa;
+ --ts-heading-2: #dee2e6;
+ --ts-heading-3: #ced4da;
+ --ts-heading-4: #adb5bd;
+ --ts-heading-5: #9aa0a6;
+ --ts-heading-6: #868e96;
+ --ts-heading-rule: #495057;
+}
+
+/* 4. Terminal Grid & Containers: Avoid web pixel max-widths and overflowing negative margins */
+.container,
+.container-fluid,
+.container-sm,
+.container-md,
+.container-lg,
+.container-xl,
+.container-xxl {
+ display: block;
+ width: 100% !important;
+ max-width: 100% !important;
+ margin-left: 0 !important;
+ margin-right: 0 !important;
+}
+
+.row {
+ display: flex;
+ margin-left: 0 !important;
+ margin-right: 0 !important;
+}
+
+.row>* {
+ padding-left: 0 !important;
+ padding-right: 0 !important;
+}
+
+/* 5. Terminal Spacing Utilities (Discrete Cell Scales) */
+.p-0 {
+ padding: 0 !important;
+}
+
+.p-1 {
+ padding: 0 1 !important;
+}
+
+.p-2 {
+ padding: 0 2 !important;
+}
+
+.p-3 {
+ padding: 1 3 !important;
+}
+
+.p-4 {
+ padding: 1 4 !important;
+}
+
+.p-5 {
+ padding: 2 5 !important;
+}
+
+.px-0 {
+ padding-left: 0 !important;
+ padding-right: 0 !important;
+}
+
+.px-1 {
+ padding-left: 1 !important;
+ padding-right: 1 !important;
+}
+
+.px-2 {
+ padding-left: 2 !important;
+ padding-right: 2 !important;
+}
+
+.px-3 {
+ padding-left: 3 !important;
+ padding-right: 3 !important;
+}
+
+.px-4 {
+ padding-left: 4 !important;
+ padding-right: 4 !important;
+}
+
+.px-5 {
+ padding-left: 5 !important;
+ padding-right: 5 !important;
+}
+
+.py-0 {
+ padding-top: 0 !important;
+ padding-bottom: 0 !important;
+}
+
+.py-1 {
+ padding-top: 1 !important;
+ padding-bottom: 1 !important;
+}
+
+.py-2 {
+ padding-top: 1 !important;
+ padding-bottom: 1 !important;
+}
+
+.py-3 {
+ padding-top: 1 !important;
+ padding-bottom: 1 !important;
+}
+
+.py-4 {
+ padding-top: 2 !important;
+ padding-bottom: 2 !important;
+}
+
+.py-5 {
+ padding-top: 2 !important;
+ padding-bottom: 2 !important;
+}
+
+.pt-0 {
+ padding-top: 0 !important;
+}
+
+.pt-1 {
+ padding-top: 1 !important;
+}
+
+.pt-2 {
+ padding-top: 1 !important;
+}
+
+.pt-3 {
+ padding-top: 1 !important;
+}
+
+.pt-4 {
+ padding-top: 2 !important;
+}
+
+.pt-5 {
+ padding-top: 2 !important;
+}
+
+.pb-0 {
+ padding-bottom: 0 !important;
+}
+
+.pb-1 {
+ padding-bottom: 1 !important;
+}
+
+.pb-2 {
+ padding-bottom: 1 !important;
+}
+
+.pb-3 {
+ padding-bottom: 1 !important;
+}
+
+.pb-4 {
+ padding-bottom: 2 !important;
+}
+
+.pb-5 {
+ padding-bottom: 2 !important;
+}
+
+.ps-0,
+.pl-0 {
+ padding-left: 0 !important;
+}
+
+.ps-1,
+.pl-1 {
+ padding-left: 1 !important;
+}
+
+.ps-2,
+.pl-2 {
+ padding-left: 2 !important;
+}
+
+.ps-3,
+.pl-3 {
+ padding-left: 3 !important;
+}
+
+.ps-4,
+.pl-4 {
+ padding-left: 4 !important;
+}
+
+.ps-5,
+.pl-5 {
+ padding-left: 5 !important;
+}
+
+.pe-0,
+.pr-0 {
+ padding-right: 0 !important;
+}
+
+.pe-1,
+.pr-1 {
+ padding-right: 1 !important;
+}
+
+.pe-2,
+.pr-2 {
+ padding-right: 2 !important;
+}
+
+.pe-3,
+.pr-3 {
+ padding-right: 3 !important;
+}
+
+.pe-4,
+.pr-4 {
+ padding-right: 4 !important;
+}
+
+.pe-5,
+.pr-5 {
+ padding-right: 5 !important;
+}
+
+.m-0 {
+ margin: 0 !important;
+}
+
+.m-1 {
+ margin: 0 1 !important;
+}
+
+.m-2 {
+ margin: 0 2 !important;
+}
+
+.m-3 {
+ margin: 1 3 !important;
+}
+
+.m-4 {
+ margin: 1 4 !important;
+}
+
+.m-5 {
+ margin: 2 5 !important;
+}
+
+.mx-0 {
+ margin-left: 0 !important;
+ margin-right: 0 !important;
+}
+
+.mx-1 {
+ margin-left: 1 !important;
+ margin-right: 1 !important;
+}
+
+.mx-2 {
+ margin-left: 2 !important;
+ margin-right: 2 !important;
+}
+
+.mx-3 {
+ margin-left: 3 !important;
+ margin-right: 3 !important;
+}
+
+.mx-4 {
+ margin-left: 4 !important;
+ margin-right: 4 !important;
+}
+
+.mx-5 {
+ margin-left: 5 !important;
+ margin-right: 5 !important;
+}
+
+.my-0 {
+ margin-top: 0 !important;
+ margin-bottom: 0 !important;
+}
+
+.my-1 {
+ margin-top: 1 !important;
+ margin-bottom: 1 !important;
+}
+
+.my-2 {
+ margin-top: 1 !important;
+ margin-bottom: 1 !important;
+}
+
+.my-3 {
+ margin-top: 2 !important;
+ margin-bottom: 2 !important;
+}
+
+.my-4 {
+ margin-top: 2 !important;
+ margin-bottom: 2 !important;
+}
+
+.my-5 {
+ margin-top: 2 !important;
+ margin-bottom: 2 !important;
+}
+
+.mt-0 {
+ margin-top: 0 !important;
+}
+
+.mt-1 {
+ margin-top: 1 !important;
+}
+
+.mt-2 {
+ margin-top: 1 !important;
+}
+
+.mt-3 {
+ margin-top: 1 !important;
+}
+
+.mt-4 {
+ margin-top: 2 !important;
+}
+
+.mt-5 {
+ margin-top: 2 !important;
+}
+
+.mb-0 {
+ margin-bottom: 0 !important;
+}
+
+.mb-1 {
+ margin-bottom: 1 !important;
+}
+
+.mb-2 {
+ margin-bottom: 1 !important;
+}
+
+.mb-3 {
+ margin-bottom: 1 !important;
+}
+
+.mb-4 {
+ margin-bottom: 2 !important;
+}
+
+.mb-5 {
+ margin-bottom: 2 !important;
+}
+
+.ms-0,
+.ml-0 {
+ margin-left: 0 !important;
+}
+
+.ms-1,
+.ml-1 {
+ margin-left: 1 !important;
+}
+
+.ms-2,
+.ml-2 {
+ margin-left: 2 !important;
+}
+
+.ms-3,
+.ml-3 {
+ margin-left: 3 !important;
+}
+
+.ms-4,
+.ml-4 {
+ margin-left: 4 !important;
+}
+
+.ms-5,
+.ml-5 {
+ margin-left: 5 !important;
+}
+
+.me-0,
+.mr-0 {
+ margin-right: 0 !important;
+}
+
+.me-1,
+.mr-1 {
+ margin-right: 1 !important;
+}
+
+.me-2,
+.mr-2 {
+ margin-right: 2 !important;
+}
+
+.me-3,
+.mr-3 {
+ margin-right: 3 !important;
+}
+
+.me-4,
+.mr-4 {
+ margin-right: 4 !important;
+}
+
+.me-5,
+.mr-5 {
+ margin-right: 5 !important;
+}
+
+/* 6. Terminal Borders */
+.border {
+ border: 1px solid currentColor !important;
+}
+
+.border-top {
+ border-top: 1px solid currentColor !important;
+}
+
+.border-bottom {
+ border-bottom: 1px solid currentColor !important;
+}
+
+.border-left,
+.border-start {
+ border-left: 1px solid currentColor !important;
+}
+
+.border-right,
+.border-end {
+ border-right: 1px solid currentColor !important;
+}
+
+.rounded {
+ border-radius: true !important;
+}
+
+/* 7. Terminal Tables: compact without vertical padding */
+table,
+.table {
+ margin-top: 1;
+ margin-bottom: 1;
+}
+
+table>*>*>*,
+.table>*>*>*,
+th,
+td {
+ padding-top: 0 !important;
+ padding-bottom: 0 !important;
+ padding-left: 1 !important;
+ padding-right: 1 !important;
+}
+
+th {
+ font-weight: bold !important;
+}
