@@ -3,6 +3,7 @@ package termstrap
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestAsciiTag_Basic(t *testing.T) {
@@ -143,5 +144,45 @@ func TestAsciiFonts_ListAndResolution(t *testing.T) {
 		if len(strings.TrimSpace(out)) == 0 {
 			t.Fatalf("Expected non-empty output for font %q", f)
 		}
+	}
+}
+
+func TestAsciiFonts_ResponsiveFallback(t *testing.T) {
+	// At width 80, "doh" (123 cols) cannot fit. It must fallback to "small" or "doom".
+	html := `<ascii font="doh,doom,small">Hubs.sh</ascii>`
+	m := New(html, WithWidth(80))
+	out, err := m.Render()
+	if err != nil {
+		t.Fatalf("Render failed: %v", err)
+	}
+
+	// Output lines must fit within 80 cols
+	for _, l := range strings.Split(out, "\n") {
+		stripped := stripANSI(l)
+		if len(stripped) > 80 {
+			t.Errorf("Line exceeded 80 cols in responsive fallback: %q", stripped)
+		}
+	}
+}
+
+func TestAsciiFonts_FitScale(t *testing.T) {
+	// "doh" needs ~123 cols. fit="scale" must keep doh and downscale it (not swap font),
+	// producing block art that fits within the width via Unicode sextant characters.
+	html := `<ascii font="doh" fit="scale">Hubs.sh</ascii>`
+	m := New(html, WithWidth(60))
+	out, err := m.Render()
+	if err != nil {
+		t.Fatalf("Render failed: %v", err)
+	}
+
+	for _, l := range strings.Split(out, "\n") {
+		if w := utf8.RuneCountInString(stripANSI(l)); w > 60 {
+			t.Errorf("Line exceeded 60 cols under fit=scale: width=%d %q", w, l)
+		}
+	}
+
+	// Must contain block/sextant glyphs proving the art was downscaled, not clipped.
+	if !strings.ContainsAny(stripANSI(out), "█▌▐🬀🬁🬂🬃🬄🬅🬆🬇🬈🬉🬊🬋🬌🬍🬎🬏") {
+		t.Errorf("Expected Unicode block glyphs from downscaling, got:\n%s", out)
 	}
 }

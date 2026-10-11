@@ -830,15 +830,13 @@ func (m Model) renderImageNode(node *RenderNode, x, y int, overlays *[]ImageOver
 	return rendered
 }
 func (m Model) renderAsciiNode(node *RenderNode, currentX, currentY, targetHeight int) string {
-	lines := newFigureSafe(node.Text, node.Font, node.Strict)
-	asciiText := strings.Join(lines, "\n")
-
-	// Format lines with alignment and clipping
 	targetW := node.ContentWidth
 	if targetW <= 0 {
 		targetW = node.LipglossWidth
 	}
 
+	lines := asciiLines(node.Text, node.Font, node.Fit, node.Strict, targetW)
+	asciiText := strings.Join(lines, "\n")
 	// Find max line width across all lines so the banner block stays rectangular
 	maxBannerW := 0
 	var clippedLines []string
