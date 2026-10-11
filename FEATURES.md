@@ -169,7 +169,7 @@ Toutes ces décorations se cumulent et s'héritent sur les enfants inline.
 | `<hr>` | Ligne horizontale de séparation |
 | `<ul>`, `<ol>`, `<li>` | Listes ordonnées et non-ordonnées |
 | `<img>` | Image rendue en demi-blocs ANSI ou transmise en overlay natif |
-
+| `<ascii>` | Bannière texte en ASCII Art FIGlet (`width`, `color`, `font`) |
 ### Coloration Syntaxique des Blocs de Code
 
 Les blocs `<pre>` sont colorés syntaxiquement via [chroma](https://github.com/alecthomas/chroma) (activé par défaut).
@@ -368,6 +368,21 @@ for step := range 50 {
   - `termstrap.Shimmer(text string, step int, opts ...ShimmerOptions) string`
   - `termstrap.Spinner(step int, frames ...[]string) string`
 
+
+## 8quinquies. Bannières ASCII Art (`<ascii>`)
+
+La balise `<ascii>` permet de générer des bannières texte en ASCII art (polices FIGlet) intégrées au flux HTML/CSS :
+
+```html
+<ascii width="50" color="#ffffff">Hello</ascii>
+```
+
+### Attributs & Personnalisation
+- **`width`** : Largeur maximale allouée (en colonnes/cellules). Si le rendu dépasse, les lignes sont tronquées proprement à la limite impartie.
+- **`color`** : Couleur du texte ASCII (code hexadécimal `#ffffff`, couleur CSS ou nom). Peut également être défini via CSS (`color: ...` ou classes Bootstrap comme `.text-warning`).
+- **`font`** : Nom de la police FIGlet (`"standard"` par défaut, ou `"slant"`, `"doom"`, `"block"`, etc.).
+- Compatible avec les marges, bordures, ombres et conteneurs Bootstrap (`.row`, `.col-*`, `.border`, etc.).
+
 ## 8quater. En-têtes Épinglés (`position-sticky` / `.sticky`)
 
 Un terminal n'a pas de `position: sticky` CSS : le rendu est **statique**, et le
@@ -439,6 +454,29 @@ m := termstrap.New(htmlContent,
 )
 output, err := m.Render()
 ```
+
+`WithStylesheets` **auto-détecte** la nature de chaque argument :
+
+| Argument | Détection | Chargement |
+| :--- | :--- | :--- |
+| CSS brut | contient `{` / `}` ou un saut de ligne | utilisé tel quel |
+| URL | préfixe `http://` ou `https://` | `http.Get` (timeout 5 s, 2xx requis) |
+| Chemin de fichier | sinon | `os.ReadFile` (relatif → résolu via `WithRootPath`) |
+
+```go
+m := termstrap.New(htmlContent,
+    termstrap.WithWidth(100),
+    termstrap.WithRootPath("./assets"),
+    termstrap.WithStylesheets(
+        ".badge-custom { background-color: #6f42c1; }", // CSS brut
+        "theme.css",                                    // fichier (via RootPath)
+        "https://cdn.example.com/site.css",             // URL
+    ),
+)
+```
+
+Un chemin/URL illisible est ignoré silencieusement (même politique que `<link>`).
+La résolution a lieu au `Render()`, donc l'ordre vis-à-vis de `WithRootPath` n'importe pas.
 
 ---
 

@@ -24,6 +24,7 @@ import (
 	termimage "github.com/go-scripts/termstrap/image"
 	"github.com/muesli/reflow/wordwrap"
 	"github.com/muesli/reflow/wrap"
+	"github.com/common-nighthawk/go-figure"
 )
 
 // ImageOverlay represents an image escape sequence separated from the text.
@@ -239,6 +240,55 @@ func PinSticky(view string, regions []StickyRegion, yOffset int) string {
 	return strings.Join(lines, "\n")
 }
 
+// loadExternalCSS fetches CSS from an http(s) URL or a local file (resolved
+// against rootPath when relative). ok is false when the source can't be loaded.
+func loadExternalCSS(src, rootPath string) (string, bool) {
+	if strings.HasPrefix(src, "http://") || strings.HasPrefix(src, "https://") {
+		client := &http.Client{Timeout: 5 * time.Second}
+		resp, err := client.Get(src)
+		if err != nil {
+			return "", false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return "", false
+		}
+		data, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return "", false
+		}
+		return string(data), true
+	}
+	path := src
+	if rootPath != "" && !filepath.IsAbs(path) {
+		path = filepath.Join(rootPath, path)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", false
+	}
+	return string(data), true
+}
+
+// resolveStylesheetArg classifies a WithStylesheets argument as raw CSS, a file
+// path, or an http(s) URL, loading external sources. Raw CSS (containing rule
+// braces or spanning multiple lines) is returned unchanged; an unreadable
+// path/URL yields "" so it is skipped (same silent policy as <link>).
+func resolveStylesheetArg(src, rootPath string) string {
+	s := strings.TrimSpace(src)
+	if s == "" {
+		return ""
+	}
+	isURL := strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
+	if !isURL && strings.ContainsAny(s, "{}\n") {
+		return src
+	}
+	if css, ok := loadExternalCSS(s, rootPath); ok {
+		return css
+	}
+	return ""
+}
+
 // RenderWithOverlays returns rendered text along with separated image overlays.
 func (m Model) RenderWithOverlays() (string, []ImageOverlay, error) {
 	return m.renderWithOverlays(true)
@@ -270,6 +320,18 @@ func (m Model) renderWithOverlays(withOverlays bool) (string, []ImageOverlay, er
 		return "", nil, err
 	}
 
+	// Resolve user-provided stylesheets: each WithStylesheets entry may be raw
+	// CSS, a local file path, or an http(s) URL — auto-detect and load.
+	if len(m.Stylesheets) > 0 {
+		resolved := make([]string, 0, len(m.Stylesheets))
+		for _, src := range m.Stylesheets {
+			if css := resolveStylesheetArg(src, m.RootPath); css != "" {
+				resolved = append(resolved, css)
+			}
+		}
+		m.Stylesheets = resolved
+	}
+
 	// Extract embedded <style> tags
 	doc.Find("style").Each(func(i int, s *goquery.Selection) {
 		text := s.Text()
@@ -278,32 +340,14 @@ func (m Model) renderWithOverlays(withOverlays bool) (string, []ImageOverlay, er
 		}
 	})
 
-	// Extract linked <link rel="stylesheet"> tags
+	// Extract linked <link rel="stylesheet"> tags (local via RootPath / remote http)
 	doc.Find("link[rel='stylesheet']").Each(func(i int, s *goquery.Selection) {
 		href, exists := s.Attr("href")
 		if !exists || strings.TrimSpace(href) == "" {
 			return
 		}
-		href = strings.TrimSpace(href)
-		if strings.HasPrefix(href, "http://") || strings.HasPrefix(href, "https://") {
-			client := &http.Client{Timeout: 5 * time.Second}
-			resp, err := client.Get(href)
-			if err == nil {
-				defer resp.Body.Close()
-				if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-					if data, err := io.ReadAll(resp.Body); err == nil {
-						m.Stylesheets = append(m.Stylesheets, string(data))
-					}
-				}
-			}
-		} else {
-			path := href
-			if m.RootPath != "" && !filepath.IsAbs(path) {
-				path = filepath.Join(m.RootPath, path)
-			}
-			if data, err := os.ReadFile(path); err == nil {
-				m.Stylesheets = append(m.Stylesheets, string(data))
-			}
+		if css, ok := loadExternalCSS(strings.TrimSpace(href), m.RootPath); ok {
+			m.Stylesheets = append(m.Stylesheets, css)
 		}
 	})
 
@@ -460,6 +504,10 @@ func (m Model) renderInline(node *RenderNode, currentX, currentY int, overlays *
 		}
 		return applyInlineStyle(node.Style, node.Text)
 	}
+	if node.Tag == "ascii" {
+		return m.renderAsciiNode(node, currentX, currentY, 0)
+	}
+
 
 	if node.Tag == "br" {
 		return "\n"
@@ -498,7 +546,7 @@ func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]
 		if node.Style.BorderColor != "" {
 			rule = lipgloss.NewStyle().Foreground(lipgloss.Color(node.Style.BorderColor)).Render(rule)
 		}
-		return applyLipglossStyle(node.Style, node.LipglossWidth, targetHeight, rule)
+		return m.applyLipglossStyle(node.Style, node.LipglossWidth, targetHeight, rule)
 	}
 
 	if node.Tag == "pre" {
@@ -506,8 +554,12 @@ func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]
 		if !m.DisableSyntaxHighlight {
 			text = highlightCode(text, node.Lang, m.ColorMode, m.codeStyle)
 		}
-		return applyLipglossStyle(node.Style, node.LipglossWidth, targetHeight, text)
+		return m.applyLipglossStyle(node.Style, node.LipglossWidth, targetHeight, text)
 	}
+	if node.Tag == "ascii" {
+		return m.renderAsciiNode(node, currentX, currentY, targetHeight)
+	}
+
 
 	if node.Type == NodeText {
 		return node.Text
@@ -689,6 +741,21 @@ func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]
 				}
 				out := m.renderNode(child, blockX, blockY, overlays, childTargetHeight, links)
 				if out != "" {
+					// If parent has TextAlign (e.g. text-center) and child is narrower than parent ContentWidth,
+					// align each line of the child block within the parent ContentWidth
+					if node.Style.TextAlign == lipgloss.Center && node.ContentWidth > child.BoxWidth {
+						lines := strings.Split(out, "\n")
+						for li, l := range lines {
+							lines[li] = lipgloss.NewStyle().Width(node.ContentWidth).Align(lipgloss.Center).Render(l)
+						}
+						out = strings.Join(lines, "\n")
+					} else if node.Style.TextAlign == lipgloss.Right && node.ContentWidth > child.BoxWidth {
+						lines := strings.Split(out, "\n")
+						for li, l := range lines {
+							lines[li] = lipgloss.NewStyle().Width(node.ContentWidth).Align(lipgloss.Right).Render(l)
+						}
+						out = strings.Join(lines, "\n")
+					}
 					childOutputs = append(childOutputs, out)
 					blockY += strings.Count(out, "\n") + 1
 				}
@@ -697,7 +764,7 @@ func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]
 		flushInlineRun()
 		content = lipgloss.JoinVertical(lipgloss.Left, childOutputs...)
 	}
-	out := applyLipglossStyle(node.Style, node.LipglossWidth, targetHeight, content)
+	out := m.applyLipglossStyle(node.Style, node.LipglossWidth, targetHeight, content)
 	if node.Tag == "a" && node.Href != "" && !m.DisableHyperlinks && links != nil {
 		id := len(*links)
 		*links = append(*links, node.Href)
@@ -760,6 +827,99 @@ func (m Model) renderImageNode(node *RenderNode, x, y int, overlays *[]ImageOver
 
 	return rendered
 }
+func (m Model) renderAsciiNode(node *RenderNode, currentX, currentY, targetHeight int) string {
+	font := node.Font
+	if font == "" {
+		font = "standard"
+	}
+	fig := figure.NewFigure(node.Text, font, node.Strict)
+	lines := fig.Slicify()
+	asciiText := strings.Join(lines, "\n")
+
+	// Format lines with alignment and clipping
+	targetW := node.ContentWidth
+	if targetW <= 0 {
+		targetW = node.LipglossWidth
+	}
+
+	// Find max line width across all lines so the banner block stays rectangular
+	maxBannerW := 0
+	var clippedLines []string
+	for _, line := range lines {
+		// Clip if wider than allowed width
+		if targetW > 0 && lipgloss.Width(line) > targetW {
+			runes := []rune(line)
+			curW := 0
+			cutIdx := len(runes)
+			for idx, r := range runes {
+				rw := lipgloss.Width(string(r))
+				if curW+rw > targetW {
+					cutIdx = idx
+					break
+				}
+				curW += rw
+			}
+			line = string(runes[:cutIdx])
+		}
+		lw := lipgloss.Width(line)
+		if lw > maxBannerW {
+			maxBannerW = lw
+		}
+		clippedLines = append(clippedLines, line)
+	}
+
+	var formattedLines []string
+	for _, line := range clippedLines {
+		// Pad line to maxBannerW so that spaces in all lines are balanced
+		if maxBannerW > 0 && lipgloss.Width(line) < maxBannerW {
+			line = line + strings.Repeat(" ", maxBannerW-lipgloss.Width(line))
+		}
+
+		// Apply shimmer animation per line if requested
+		if node.Style.Shimmer {
+			base := node.Style.FgColor
+			if base == "" {
+				base = "#44475a"
+			}
+			highlight := node.Style.ShimmerHighlight
+			if highlight == "" {
+				highlight = "#ffffff"
+			}
+			line = Shimmer(line, m.Step, ShimmerOptions{
+				BaseColor:      base,
+				HighlightColor: highlight,
+				Bold:           node.Style.Bold,
+			})
+		}
+
+		// Align line if text-align is specified
+		if targetW > 0 {
+			if node.Style.TextAlign == lipgloss.Center {
+				line = lipgloss.NewStyle().Width(targetW).Align(lipgloss.Center).Render(line)
+			} else if node.Style.TextAlign == lipgloss.Right {
+				line = lipgloss.NewStyle().Width(targetW).Align(lipgloss.Right).Render(line)
+			}
+		}
+		formattedLines = append(formattedLines, line)
+	}
+
+	asciiText = strings.Join(formattedLines, "\n")
+
+	if node.Style.Display == DisplayInline {
+		if node.Style.Shimmer {
+			return asciiText
+		}
+		return applyInlineStyle(node.Style, asciiText)
+	}
+
+	styleCopy := node.Style
+	if styleCopy.Shimmer {
+		// Shimmer has already colorized individual characters; unset FgColor on outer container
+		styleCopy.FgColor = ""
+	}
+	return m.applyLipglossStyle(styleCopy, node.LipglossWidth, targetHeight, asciiText)
+}
+
 
 func (m Model) loadImage(src string) (image.Image, error) {
 	if strings.HasPrefix(src, "http://") || strings.HasPrefix(src, "https://") {
@@ -836,8 +996,11 @@ func borderForStyle(s ComputedStyle) lipgloss.Border {
 	}
 	return lipgloss.NormalBorder()
 }
-
 func applyLipglossStyle(s ComputedStyle, width, height int, content string) string {
+	return Model{}.applyLipglossStyle(s, width, height, content)
+}
+
+func (m Model) applyLipglossStyle(s ComputedStyle, width, height int, content string) string {
 	ls := lipgloss.NewStyle()
 
 	if width > 0 && s.Display != DisplayInline {
@@ -956,7 +1119,163 @@ func applyLipglossStyle(s ComputedStyle, width, height int, content string) stri
 	if s.Shadow > 0 {
 		out = applyShadowWithWidth(out, s.Shadow, 0)
 	}
+	if s.BorderShimmer && (s.Border || s.BorderTop || s.BorderBottom || s.BorderLeft || s.BorderRight) {
+		base := s.BorderColor
+		if base == "" {
+			base = s.FgColor
+		}
+		if base == "" {
+			base = "#44475a"
+		}
+		highlight := s.ShimmerHighlight
+		if highlight == "" {
+			highlight = "#ffffff"
+		}
+		out = applyBorderShimmer(out, s, m.Step, ShimmerOptions{
+			BaseColor:      base,
+			HighlightColor: highlight,
+			Bold:           s.Bold,
+		})
+	}
 	return out
+}
+
+// applyBorderShimmer colorizes only the outer border glyphs with the shimmer wave
+func applyBorderShimmer(rendered string, s ComputedStyle, step int, opts ShimmerOptions) string {
+	rawLines := strings.Split(rendered, "\n")
+	if len(rawLines) == 0 {
+		return rendered
+	}
+
+	baseStops := []color.Color{
+		lipgloss.Color(opts.BaseColor),
+		lipgloss.Color(opts.HighlightColor),
+		lipgloss.Color(opts.BaseColor),
+	}
+
+	h := len(rawLines)
+	w := 0
+	for _, l := range rawLines {
+		lw := lipgloss.Width(l)
+		if lw > w {
+			w = lw
+		}
+	}
+	if w <= 0 || h <= 0 {
+		return rendered
+	}
+
+	totalBorderCells := 2*w + 2*h
+	paletteSteps := totalBorderCells
+	if paletteSteps < 3 {
+		paletteSteps = 3
+	}
+	palette := lipgloss.Blend1D(paletteSteps, baseStops...)
+
+	getColor := func(idx int) color.Color {
+		cIdx := (idx - step) % len(palette)
+		if cIdx < 0 {
+			cIdx += len(palette)
+		}
+		return palette[cIdx]
+	}
+
+	var newLines []string
+	for lineIdx, line := range rawLines {
+		plainLine := stripANSI(line)
+		runes := []rune(plainLine)
+		if len(runes) == 0 {
+			newLines = append(newLines, line)
+			continue
+		}
+
+		if lineIdx == 0 {
+			// Top border line: replace entire line with shimmered border glyphs
+			var sb strings.Builder
+			for x, r := range runes {
+				c := getColor(x)
+				st := lipgloss.NewStyle().Foreground(c).Bold(opts.Bold)
+				sb.WriteString(st.Render(string(r)))
+			}
+			newLines = append(newLines, sb.String())
+		} else if lineIdx == h-1 {
+			// Bottom border line: replace entire line with shimmered border glyphs
+			var sb strings.Builder
+			for x, r := range runes {
+				c := getColor(w + (h - 2) + (len(runes) - 1 - x))
+				st := lipgloss.NewStyle().Foreground(c).Bold(opts.Bold)
+				sb.WriteString(st.Render(string(r)))
+			}
+			newLines = append(newLines, sb.String())
+		} else {
+			// Middle lines: preserve inner content (including ANSI), only colorize first & last border rune
+			leftRune := string(runes[0])
+			rightRune := ""
+			if len(runes) > 1 {
+				rightRune = string(runes[len(runes)-1])
+			}
+
+			leftColor := getColor(w + (lineIdx - 1))
+			rightColor := getColor(2*w + (h - 2) + (h - 2 - lineIdx))
+
+			stLeft := lipgloss.NewStyle().Foreground(leftColor).Bold(opts.Bold).Render(leftRune)
+			stRight := ""
+			if rightRune != "" {
+				stRight = lipgloss.NewStyle().Foreground(rightColor).Bold(opts.Bold).Render(rightRune)
+			}
+
+			// Extract middle segment from original ANSI line
+			// Skip first visible glyph and last visible glyph from original line
+			middle := extractMiddleCells(line)
+			newLines = append(newLines, stLeft+middle+stRight)
+		}
+	}
+
+	return strings.Join(newLines, "\n")
+}
+
+// extractMiddleCells returns the slice of the ANSI string between the first and last visible glyph
+func extractMiddleCells(line string) string {
+	plain := stripANSI(line)
+	runes := []rune(plain)
+	if len(runes) <= 2 {
+		return ""
+	}
+
+	var sb strings.Builder
+	visibleCount := 0
+	targetMiddleCount := len(runes) - 2
+
+	i := 0
+	for i < len(line) {
+		if loc := ansiRegex.FindStringIndex(line[i:]); loc != nil && loc[0] == 0 {
+			// Include escape sequences that affect the middle cells
+			escape := line[i : i+loc[1]]
+			if visibleCount >= 1 && visibleCount <= targetMiddleCount {
+				sb.WriteString(escape)
+			}
+			i += loc[1]
+			continue
+		}
+
+		ch, size := utf8Decode(line[i:])
+		if visibleCount >= 1 && visibleCount <= targetMiddleCount {
+			sb.WriteString(string(ch))
+		}
+		visibleCount++
+		i += size
+	}
+
+	return sb.String()
+}
+
+func utf8Decode(s string) (rune, int) {
+	for i, r := range s {
+		if i == 0 {
+			return r, len(string(r))
+		}
+	}
+	return 0, 0
 }
 
 func getBackgroundSequence(colorStr string) string {

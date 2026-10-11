@@ -37,7 +37,12 @@ func WithWidth(width int) Option {
 	}
 }
 
-// WithStylesheets sets custom CSS stylesheets to be merged with default Bootstrap styles.
+// WithStylesheets adds custom CSS merged on top of the Bootstrap/theme defaults.
+// Each argument is auto-detected: raw CSS (contains "{"/"}" or newlines) is used
+// as-is; an http(s):// URL is fetched; anything else is treated as a file path
+// (relative paths resolve against WithRootPath). Unreadable paths/URLs are
+// skipped silently. Resolution happens at Render time, so option order with
+// WithRootPath does not matter.
 func WithStylesheets(stylesheets ...string) Option {
 	return func(m *Model) {
 		m.Stylesheets = append(m.Stylesheets, stylesheets...)
