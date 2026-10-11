@@ -26,6 +26,8 @@ type RenderNode struct {
 	Alt      string
 	Href     string // URL for <a> tags
 	Lang     string // Source language hint for <pre> code blocks (empty = auto/none)
+	Font     string // Font hint for <ascii> art blocks (empty = "standard")
+	Strict   bool   // Strict validation for <ascii> character set
 	IsTree   bool   // ul/ol flagged as a tree (class="tree" or role="tree")
 	Style    ComputedStyle
 	Children []*RenderNode
@@ -158,6 +160,14 @@ func BuildRenderTree(sel *goquery.Selection, matcher *CSSMatcher, termWidth int,
 		rNode.Lang = resolveLang(codeClass, preClass)
 		return rNode
 	}
+	if tag == "ascii" {
+		rNode.Text = sel.Text()
+		if fontAttr, ok := sel.Attr("font"); ok {
+			rNode.Font = fontAttr
+		}
+		return rNode
+	}
+
 
 	// ::before pseudo-element (generated content, prepended inline)
 	if beforeText, beforeStyle, ok := matcher.PseudoText(sel, termWidth, &style, "before"); ok {
@@ -249,6 +259,29 @@ func computeWidths(node *RenderNode, parentWidth int) {
 		maxW := node.Style.MaxWidth - node.Style.MarginLeft - node.Style.MarginRight - node.Style.Shadow
 		if maxW > 0 && maxW < avail {
 			avail = maxW
+		}
+	}
+
+	// For <ascii> blocks without explicit width, shrink-wrap avail to the natural ASCII banner width
+	if node.Tag == "ascii" && node.Style.Width <= 0 && node.Style.MaxWidth <= 0 {
+		lines := newFigureSafe(node.Text, node.Font, node.Strict)
+		naturalW := 0
+		for _, l := range lines {
+			if len(l) > naturalW {
+				naturalW = len(l)
+			}
+		}
+		borderExtra := 0
+		if node.Style.Border || node.Style.BorderLeft {
+			borderExtra++
+		}
+		if node.Style.Border || node.Style.BorderRight {
+			borderExtra++
+		}
+		paddingExtra := node.Style.PaddingLeft + node.Style.PaddingRight
+		needed := naturalW + borderExtra + paddingExtra
+		if needed > 0 && needed < avail {
+			avail = needed
 		}
 	}
 	borderH := 0

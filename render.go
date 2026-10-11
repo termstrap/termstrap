@@ -24,7 +24,6 @@ import (
 	termimage "github.com/go-scripts/termstrap/image"
 	"github.com/muesli/reflow/wordwrap"
 	"github.com/muesli/reflow/wrap"
-	"github.com/common-nighthawk/go-figure"
 )
 
 // ImageOverlay represents an image escape sequence separated from the text.
@@ -76,6 +75,10 @@ type Model struct {
 	// codeStyle is the chroma style resolved from the theme's --ts-code-* CSS
 	// variables (or SyntaxTheme override), built once per render.
 	codeStyle *chroma.Style
+
+	// headingMarkerColor is the resolved --ts-heading-rule color used to tint the
+	// Markdown-style #/##/… markers around <h1>-<h6> text.
+	headingMarkerColor string
 
 	// Step specifies the animation frame step for <spinner>, <shimmer>, .spinner, .shimmer.
 	Step int
@@ -364,6 +367,14 @@ func (m Model) renderWithOverlays(withOverlays bool) (string, []ImageOverlay, er
 			vars = matcher.Preprocessor.GlobalVars
 		}
 		m.codeStyle = resolveCodeStyle(m.SyntaxTheme, vars)
+	}
+
+	// Resolve the --ts-heading-rule color used to tint the heading markers.
+	m.headingMarkerColor = "#495057"
+	if matcher.Preprocessor != nil {
+		if v, ok := matcher.Preprocessor.GlobalVars["--ts-heading-rule"]; ok && strings.TrimSpace(v) != "" {
+			m.headingMarkerColor = strings.TrimSpace(v)
+		}
 	}
 
 	body := doc.Find("body")
@@ -687,19 +698,10 @@ func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]
 			}
 
 			wrapped := wrapText(trimmed, node.ContentWidth)
-			if node.Style.TextAlign == lipgloss.Center {
-				lines := strings.Split(wrapped, "\n")
-				for i, l := range lines {
-					lines[i] = lipgloss.NewStyle().Width(node.ContentWidth).Align(lipgloss.Center).Render(l)
-				}
-				wrapped = strings.Join(lines, "\n")
-			} else if node.Style.TextAlign == lipgloss.Right {
-				lines := strings.Split(wrapped, "\n")
-				for i, l := range lines {
-					lines[i] = lipgloss.NewStyle().Width(node.ContentWidth).Align(lipgloss.Right).Render(l)
-				}
-				wrapped = strings.Join(lines, "\n")
+			if lvl := headingLevel(node.Tag); lvl > 0 {
+				wrapped = decorateHeadingLines(wrapped, lvl, node.Style.TextAlign, m.headingMarkerColor)
 			}
+
 
 			if node.Tag == "li" {
 				lines := strings.Split(wrapped, "\n")
@@ -828,12 +830,7 @@ func (m Model) renderImageNode(node *RenderNode, x, y int, overlays *[]ImageOver
 	return rendered
 }
 func (m Model) renderAsciiNode(node *RenderNode, currentX, currentY, targetHeight int) string {
-	font := node.Font
-	if font == "" {
-		font = "standard"
-	}
-	fig := figure.NewFigure(node.Text, font, node.Strict)
-	lines := fig.Slicify()
+	lines := newFigureSafe(node.Text, node.Font, node.Strict)
 	asciiText := strings.Join(lines, "\n")
 
 	// Format lines with alignment and clipping
@@ -1005,6 +1002,9 @@ func (m Model) applyLipglossStyle(s ComputedStyle, width, height int, content st
 
 	if width > 0 && s.Display != DisplayInline {
 		ls = ls.Width(width)
+		if s.TextAlignSet && s.TextAlign != lipgloss.Left {
+			ls = ls.Align(s.TextAlign)
+		}
 	}
 	if height > 0 && s.Display != DisplayInline {
 		borderV := 0
@@ -1453,6 +1453,37 @@ func boolStr(b bool, str string) string {
 		return str
 	}
 	return ""
+}
+
+// headingLevel returns 1-6 for <h1>-<h6> tags, or 0 for any other tag.
+func headingLevel(tag string) int {
+	if len(tag) == 2 && tag[0] == 'h' && tag[1] >= '1' && tag[1] <= '6' {
+		return int(tag[1] - '0')
+	}
+	return 0
+}
+
+// decorateHeadingLines prefixes/suffixes each line of a heading with a tinted
+// Markdown-style marker (#, ##, …). Centered headings get the marker on both
+// sides of every line; right-aligned headings get it only on the right; any
+// other alignment gets it only on the left.
+func decorateHeadingLines(text string, level int, align lipgloss.Position, markerColor string) string {
+	marker := strings.Repeat("#", level)
+	if markerColor != "" {
+		marker = lipgloss.NewStyle().Foreground(lipgloss.Color(markerColor)).Render(marker)
+	}
+	lines := strings.Split(text, "\n")
+	for i, l := range lines {
+		switch align {
+		case lipgloss.Center:
+			lines[i] = marker + " " + l + " " + marker
+		case lipgloss.Right:
+			lines[i] = l + " " + marker
+		default:
+			lines[i] = marker + " " + l
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 func wrapText(text string, width int) string {
 	if width <= 0 {

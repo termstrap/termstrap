@@ -168,6 +168,9 @@ Termstrap implements a subset of Bootstrap 5 CSS classes tailored for terminal g
 * **Classes & CSS**: `.spinner`, `.shimmer`, `animation: shimmer`, `animation: spinner`
 * **Model Step**: `termstrap.WithStep(step)` to advance frames dynamically.
 
+### ASCII Art Banners
+* **Declarative Tag**: `<ascii width="50" color="#ffffff" font="standard">Hello</ascii>`
+* **Styling**: Supports `width`, `color`, and `font` attributes as well as standard CSS / Bootstrap classes (`text-primary`, `border`, `border-shimmer`, `shimmer`, `p-2`).
 ### Flexbox Alignment
 * **Justify**: `.justify-content-start|center|end`, `justify-content: space-between`.
 * **Align**: `.align-items-start|center|end`, `align-items: stretch` (default equalizes column heights).

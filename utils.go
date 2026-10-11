@@ -8,9 +8,7 @@ import (
 )
 
 // ansiRegex matches ANSI escape sequences.
-var ansiRegex = regexp.MustCompile(`\x1b\[[0-9;]*m`)
-
-// stripANSI removes all ANSI escape sequences from a string.
+var ansiRegex = regexp.MustCompile(`\x1b\[[0-9;:?]*[a-zA-Z]`)
 func stripANSI(s string) string {
 	return strings.TrimSpace(ansiRegex.ReplaceAllString(s, ""))
 }

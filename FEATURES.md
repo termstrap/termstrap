@@ -248,7 +248,10 @@ Un terminal n'a pas de `font-size` : TermStrap différencie les niveaux par d'au
 
 - **Échelle de couleur par niveau** : de `--ts-heading-1` (le plus clair) à `--ts-heading-6` (le plus atténué), surchargée par chaque thème selon sa charte (accent sur `h1`).
 - **Graisse / style** : `h1`–`h4` en gras, `h5`/`h6` en italique.
-- **Marqueurs Markdown** (par défaut) : chaque titre est préfixé par `#`…`######` via `h1::before`…`h6::before`, dans la teinte atténuée `--ts-heading-rule`. Désactivable en surchargeant `content: none`.
+- **Marqueurs Markdown** (par défaut) : chaque titre est encadré par `#`…`######` (selon le niveau) dans la teinte atténuée `--ts-heading-rule`, et la position du marqueur suit l'alignement du titre :
+  - **centré** (`text-center`) : marqueur de **chaque côté** de chaque ligne — `## Titre ##` ;
+  - **aligné à droite** (`text-end`) : marqueur **à droite** uniquement — `Titre ###` ;
+  - **sinon** (gauche) : marqueur **à gauche** uniquement — `## Titre`.
 - **`text-transform`** (nouveau dans le moteur) : `uppercase` / `lowercase` / `capitalize`, utilisable sur n'importe quelle balise.
 
   ```css
@@ -275,7 +278,7 @@ Le moteur résout les pseudo-éléments `::before` et `::after` (ainsi que la sy
 
 - La propriété `content` accepte les chaînes (`"— "`) et décode les échappements CSS unicode (`"\2014\00a0"`, `"\00bb"`). `content: none` / `normal` ou les formes fonctionnelles non supportées (`attr()`, `counters()`) ne génèrent rien.
 - Le pseudo-élément hérite des propriétés typographiques de l'élément (graisse, italique, couleur) ; ses propres déclarations (ex. `color`) priment.
-- Alimente nativement les composants Bootstrap qui en dépendent, p. ex. `.blockquote-footer::before { content: "— "; }`, et les marqueurs Markdown des titres.
+- Alimente nativement les composants Bootstrap qui en dépendent, p. ex. `.blockquote-footer::before { content: "— "; }`.
 
   ```css
   .note::before { content: "» "; color: #6c757d; }
@@ -378,12 +381,19 @@ La balise `<ascii>` permet de générer des bannières texte en ASCII art (polic
 ```
 
 ### Attributs & Personnalisation
-- **`width`** : Largeur maximale allouée (en colonnes/cellules). Si le rendu dépasse, les lignes sont tronquées proprement à la limite impartie.
+- **`width`** : Largeur allouée en colonnes (`"50"`) ou en pourcentage (`"100%"`). Si aucune largeur n'est spécifiée, le conteneur s'ajuste automatiquement (*shrink-wrap*) à la largeur exacte de la bannière.
 - **`color`** : Couleur du texte ASCII (code hexadécimal `#ffffff`, couleur CSS ou nom). Peut également être défini via CSS (`color: ...` ou classes Bootstrap comme `.text-warning`).
-- **`font`** : Nom de la police FIGlet (`"standard"` par défaut, ou `"slant"`, `"doom"`, `"block"`, etc.).
-- Compatible avec les marges, bordures, ombres et conteneurs Bootstrap (`.row`, `.col-*`, `.border`, etc.).
+- **`font`** : Nom de la police FIGlet parmi plus de 140 polices intégrées (`"standard"` par défaut, insensible à la casse avec repli automatique sécurisé). Exemples populaires :
+  - **Classiques** : `standard`, `big`, `banner`, `small`, `mini`, `block`
+  - **Modernes / Italiques** : `slant`, `shadow`, `slant-relief`, `speed`
+  - **Compactes / Minimalistes** : `digital`, `lcd`, `lean`, `cyberlarge`, `cybersmall`
+  - **Jeux / Stylisées** : `doom`, `graffiti`, `epic`, `larry3d`, `isometric1`, `starwars`
+- **`class="border-shimmer"`** : Applique une vague d'animation shimmer lumineuse animée directement le long de la bordure du bloc.
+- Compatible avec les marges, paddings, bordures (`.border`, `.rounded`), ombres et alignements (`.text-center`, `.text-end`).
+- **Fonction Go** : `termstrap.AvailableAsciiFonts()` retourne la liste complète des noms de polices intégrées.
 
 ## 8quater. En-têtes Épinglés (`position-sticky` / `.sticky`)
+
 
 Un terminal n'a pas de `position: sticky` CSS : le rendu est **statique**, et le
 défilement appartient au conteneur appelant (ex. un `viewport` Bubble Tea). Le

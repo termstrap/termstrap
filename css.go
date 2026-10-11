@@ -88,11 +88,11 @@ type ComputedStyle struct {
 	BorderRightColor  string
 	BorderBottomColor string
 	BorderLeftColor   string
+	BorderShimmer     bool
 	// Border color blending / gradients
 	BorderBlend []string
 	// Shadow (0 = none, 1 = sm, 2 = md, 3 = lg)
 	Shadow int
-
 	// Colors
 	FgColor    string
 	FgColorSet bool
@@ -378,6 +378,14 @@ func (m *CSSMatcher) ComputeStyleForSelection(sel *goquery.Selection, termWidth 
 	}
 
 	// Parse inline styles if present
+	// Apply HTML attributes as base inline declarations if present (e.g. width="50" color="#fff")
+	if colorAttr, ok := sel.Attr("color"); ok && colorAttr != "" {
+		applyDeclaration(&s, &css.Declaration{Property: "color", Value: colorAttr}, ctx)
+	}
+	if widthAttr, ok := sel.Attr("width"); ok && widthAttr != "" {
+		applyDeclaration(&s, &css.Declaration{Property: "width", Value: widthAttr}, ctx)
+	}
+
 	var inlineDecls []*css.Declaration
 	if inlineStyle, ok := sel.Attr("style"); ok && inlineStyle != "" {
 		if decls, err := parser.ParseDeclarations(inlineStyle); err == nil {
@@ -422,6 +430,8 @@ func (m *CSSMatcher) ComputeStyleForSelection(sel *goquery.Selection, termWidth 
 		} else if c == "shimmer" {
 			s.Shimmer = true
 			s.ShimmerSet = true
+		} else if c == "border-shimmer" {
+			s.BorderShimmer = true
 		}
 	}
 	span, isAuto := resolveColSpanResponsive(classes, bp)

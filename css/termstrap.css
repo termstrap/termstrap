@@ -16,7 +16,8 @@ table,
 tr,
 blockquote,
 hr,
-pre {
+pre,
+ascii {
  display: block;
 }
 
@@ -81,38 +82,6 @@ h5 {
 h6 {
  font-style: italic;
  color: var(--ts-heading-6) !important;
-}
-
-/* Markdown-style level markers (#, ##, ... ######) before each heading.
-   The marker is muted via --ts-heading-rule so the title text stays dominant. */
-h1::before {
- content: "# ";
- color: var(--ts-heading-rule) !important;
-}
-
-h2::before {
- content: "## ";
- color: var(--ts-heading-rule) !important;
-}
-
-h3::before {
- content: "### ";
- color: var(--ts-heading-rule) !important;
-}
-
-h4::before {
- content: "#### ";
- color: var(--ts-heading-rule) !important;
-}
-
-h5::before {
- content: "##### ";
- color: var(--ts-heading-rule) !important;
-}
-
-h6::before {
- content: "###### ";
- color: var(--ts-heading-rule) !important;
 }
 
 p {
