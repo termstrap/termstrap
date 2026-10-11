@@ -170,6 +170,8 @@ Termstrap implements a subset of Bootstrap 5 CSS classes tailored for terminal g
 
 ### ASCII Art Banners
 * **Declarative Tag**: `<ascii width="50" color="#ffffff" font="standard">Hello</ascii>`
+* **Responsive Font Stack (recommended)**: `font="doh,univers,colossal,big,small"` or `font="auto"` picks the largest font that fully fits the available width and steps down as it shrinks — glyphs always stay **sharp** (no pixelation). List fonts from the same family to preserve style.
+* **Exact-Font Pixel Scaling**: `fit="scale"` keeps the chosen font identical and downsamples its artwork into Unicode 2×3 sextant blocks. Tradeoff: same font at any width, but letters **pixelate** when small.
 * **Styling**: Supports `width`, `color`, and `font` attributes as well as standard CSS / Bootstrap classes (`text-primary`, `border`, `border-shimmer`, `shimmer`, `p-2`).
 ### Flexbox Alignment
 * **Justify**: `.justify-content-start|center|end`, `justify-content: space-between`.

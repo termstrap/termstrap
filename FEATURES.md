@@ -383,11 +383,16 @@ La balise `<ascii>` permet de générer des bannières texte en ASCII art (polic
 ### Attributs & Personnalisation
 - **`width`** : Largeur allouée en colonnes (`"50"`) ou en pourcentage (`"100%"`). Si aucune largeur n'est spécifiée, le conteneur s'ajuste automatiquement (*shrink-wrap*) à la largeur exacte de la bannière.
 - **`color`** : Couleur du texte ASCII (code hexadécimal `#ffffff`, couleur CSS ou nom). Peut également être défini via CSS (`color: ...` ou classes Bootstrap comme `.text-warning`).
-- **`font`** : Nom de la police FIGlet parmi plus de 140 polices intégrées (`"standard"` par défaut, insensible à la casse avec repli automatique sécurisé). Exemples populaires :
-  - **Classiques** : `standard`, `big`, `banner`, `small`, `mini`, `block`
-  - **Modernes / Italiques** : `slant`, `shadow`, `slant-relief`, `speed`
-  - **Compactes / Minimalistes** : `digital`, `lcd`, `lean`, `cyberlarge`, `cybersmall`
-  - **Jeux / Stylisées** : `doom`, `graffiti`, `epic`, `larry3d`, `isometric1`, `starwars`
+- **`font`** : Nom de la police FIGlet, ou **échelle de repli responsive** (*fallback stack*) séparée par des virgules, ordonnée de la plus grande à la plus petite. C'est la méthode **recommandée** pour un responsive à **lettres nettes** :
+  - `font="doh,univers,colossal,big,small"` ou `font="auto"`. Termstrap choisit la **plus grande police qui rentre entièrement** dans la largeur disponible, et descend d'un cran quand l'écran rétrécit. Les glyphes restent **toujours nets** (aucune pixelisation). Pour préserver le style, listez des polices du **même registre** (ici toutes *bloc/plein* comme `doh`).
+  - Exemples de polices intégrées :
+    - **Bloc plein / Géantes** : `doh`, `univers`, `colossal`, `block`, `banner3-D`, `epic`
+    - **Classiques** : `standard`, `big`, `small`, `mini`
+    - **Modernes / Italiques** : `slant`, `shadow`, `slant-relief`, `speed`
+    - **Jeux / Stylisées** : `doom`, `graffiti`, `larry3d`, `isometric1`, `starwars`
+- **`fit`** : Stratégie appliquée quand la bannière dépasse la largeur disponible :
+  - **`fit="clip"`** *(défaut)* : troncature propre à droite.
+  - **`fit="scale"`** : **downscale pixel à police unique**. La police choisie est conservée *à l'identique*, puis son dessin est ré-échantillonné comme une image 1-bit en blocs Unicode 2×3 (*sextants*). ⚠️ *Compromis* : cela garde exactement la même police mais **pixelise** les lettres aux petites tailles. Pour des lettres nettes, préférez l'échelle de polices (`font="a,b,c"`) ci-dessus.
 - **`class="border-shimmer"`** : Applique une vague d'animation shimmer lumineuse animée directement le long de la bordure du bloc.
 - Compatible avec les marges, paddings, bordures (`.border`, `.rounded`), ombres et alignements (`.text-center`, `.text-end`).
 - **Fonction Go** : `termstrap.AvailableAsciiFonts()` retourne la liste complète des noms de polices intégrées.
