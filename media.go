@@ -197,7 +197,7 @@ func (m *MediaCondition) Matches(termWidth, termHeight int, theme Theme) bool {
 	if themeStr == "" {
 		themeStr = "bootstrap"
 	}
-	isDark := theme == ThemeDracula || theme == ThemeTokyoNight || themeStr == "dark"
+	isDark := theme == ThemeDracula || theme == ThemeTokyoNight || theme == ThemeGlamour || themeStr == "dark"
 
 	// OR condition: matches if any clause matches
 	for _, c := range m.Clauses {

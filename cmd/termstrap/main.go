@@ -28,11 +28,15 @@ func main() {
 		disableImgFlag  bool
 		optimizeSeqFlag bool
 		watchFlag       bool
+		linkModeFlag    string
+		imageModeFlag     string
+		minImageWidthFlag int
+		presetFlag        string
 	)
 
 	flag.IntVar(&widthFlag, "width", 0, "Terminal width in columns (0 = auto-detect)")
 	flag.IntVar(&widthFlag, "w", 0, "Terminal width in columns (shorthand)")
-	flag.StringVar(&themeFlag, "theme", "bootstrap", "Visual theme (bootstrap, tokyonight, dracula)")
+	flag.StringVar(&themeFlag, "theme", "bootstrap", "Visual theme (bootstrap, tokyonight, dracula, glamour)")
 	flag.StringVar(&themeFlag, "t", "bootstrap", "Visual theme (shorthand)")
 	flag.StringVar(&rootPathFlag, "root", "", "Root directory for resolving local relative image paths")
 	flag.StringVar(&rootPathFlag, "r", "", "Root directory for resolving local images (shorthand)")
@@ -45,7 +49,10 @@ func main() {
 	flag.BoolVar(&optimizeSeqFlag, "optimize", true, "Deduplicate contiguous ANSI escape sequences")
 	flag.BoolVar(&watchFlag, "watch", false, "Watch file for changes and automatically reload render")
 	flag.BoolVar(&watchFlag, "W", false, "Watch file for changes (shorthand)")
-
+	flag.StringVar(&linkModeFlag, "link-mode", "", "Hyperlink presentation mode (osc8, inline, footnotes)")
+	flag.StringVar(&imageModeFlag, "image-mode", "", "Image rendering mode (auto, smart, glamour, placeholder)")
+	flag.IntVar(&minImageWidthFlag, "min-image-width", 0, "Minimum column width for images before smart fallback (default 12)")
+	flag.StringVar(&presetFlag, "preset", "", "Preconfigured presentation preset (e.g. 'glamour')")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: termstrap [options] <file.html|-|stdin>\n\n")
 		fmt.Fprintf(os.Stderr, "Render HTML/CSS files or standard input directly in the terminal using Termstrap.\n\n")
@@ -146,9 +153,22 @@ func main() {
 			HTML:              htmlContent,
 			Width:             w,
 			Theme:             termstrap.Theme(themeFlag),
+			LinkMode:          termstrap.LinkMode(linkModeFlag),
+			ImageMode:         termstrap.ImageMode(imageModeFlag),
+			MinImageWidth:     minImageWidthFlag,
 			RootPath:          rootPathFlag,
 			DisableImages:     disableImgFlag,
 			OptimizeSequences: &optimizeSeqFlag,
+		}
+
+		if strings.ToLower(presetFlag) == "glamour" {
+			m.Theme = termstrap.ThemeGlamour
+			if linkModeFlag == "" {
+				m.LinkMode = termstrap.LinkModeInline
+			}
+			if imageModeFlag == "" {
+				m.ImageMode = termstrap.ImageModeGlamour
+			}
 		}
 
 		if cssFileFlag != "" {

@@ -136,7 +136,7 @@ func (p *CSSPreprocessor) PreprocessDeclarations(decls []*css.Declaration) {
 	}
 
 	bgHex := "#ffffff"
-	if p.Theme == ThemeDracula || p.Theme == ThemeTokyoNight {
+	if p.Theme == ThemeDracula || p.Theme == ThemeTokyoNight || p.Theme == ThemeGlamour {
 		bgHex = "#1a1b26"
 	}
 
@@ -213,7 +213,7 @@ func (p *CSSPreprocessor) preprocessRule(rule *css.Rule) {
 		valLower := strings.ToLower(val)
 		if strings.Contains(valLower, "rgba(") || strings.Contains(valLower, "rgb(") {
 			bgHex := "#ffffff"
-			if p.Theme == ThemeDracula || p.Theme == ThemeTokyoNight {
+			if p.Theme == ThemeDracula || p.Theme == ThemeTokyoNight || p.Theme == ThemeGlamour {
 				bgHex = "#1a1b26"
 			}
 			val = ResolveColors(val, bgHex)

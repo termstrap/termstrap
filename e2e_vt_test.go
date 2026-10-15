@@ -177,6 +177,26 @@ func TestE2E_ThemeDraculaAndTokyoNightColors(t *testing.T) {
 			screen.AssertBgColor(t, x, 0, "80;250;123")
 		}
 	})
+
+	t.Run("Glamour Theme Colors", func(t *testing.T) {
+		m := New(html, WithWidth(80), WithTheme(ThemeGlamour))
+		out, err := m.Render()
+		if err != nil {
+			t.Fatalf("Render failed: %v", err)
+		}
+		testutil.ShowInteractive(t, "Glamour Theme Colors", out)
+		screen := testutil.NewScreen(80, 0, out)
+
+		// Glamour Primary is 95;95;255 (#5f5fff)
+		for x := range 40 {
+			screen.AssertBgColor(t, x, 0, "95;95;255")
+		}
+
+		// Glamour Success is 0;215;135 (#00d787)
+		for x := 40; x < 80; x++ {
+			screen.AssertBgColor(t, x, 0, "0;215;135")
+		}
+	})
 }
 
 func TestE2E_ColoredAlerts(t *testing.T) {

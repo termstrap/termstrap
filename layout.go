@@ -4,6 +4,7 @@ import (
 	"strings"
 	"unicode"
 
+	"charm.land/lipgloss/v2"
 	"github.com/PuerkitoBio/goquery"
 	"golang.org/x/net/html"
 )
@@ -265,6 +266,22 @@ func computeWidths(node *RenderNode, parentWidth int) {
 			avail = maxW
 		}
 	}
+	// For blocks with fit-content/max-content width, shrink-wrap avail to the natural content width
+	if node.Style.Width == LengthFitContent {
+		borderExtra := 0
+		if node.Style.Border || node.Style.BorderLeft {
+			borderExtra++
+		}
+		if node.Style.Border || node.Style.BorderRight {
+			borderExtra++
+		}
+		paddingExtra := node.Style.PaddingLeft + node.Style.PaddingRight
+		naturalW := naturalContentWidth(node)
+		needed := naturalW + borderExtra + paddingExtra
+		if needed > 0 && needed < avail {
+			avail = needed
+		}
+	}
 
 	// For <ascii> blocks without explicit width, shrink-wrap avail to the natural ASCII banner width
 	if node.Tag == "ascii" && node.Style.Width <= 0 && node.Style.MaxWidth <= 0 {
@@ -388,4 +405,40 @@ func computeWidths(node *RenderNode, parentWidth int) {
 			computeWidths(child, node.ContentWidth)
 		}
 	}
+}
+
+func naturalContentWidth(node *RenderNode) int {
+	if node == nil {
+		return 0
+	}
+	if node.Type == NodeText {
+		lines := strings.Split(node.Text, "\n")
+		maxW := 0
+		for _, l := range lines {
+			if w := lipgloss.Width(l); w > maxW {
+				maxW = w
+			}
+		}
+		return maxW
+	}
+	maxW := 0
+	currLine := 0
+	for _, c := range node.Children {
+		w := naturalContentWidth(c)
+		if c.Style.Display == DisplayBlock {
+			if currLine > maxW {
+				maxW = currLine
+			}
+			currLine = 0
+			if w > maxW {
+				maxW = w
+			}
+		} else {
+			currLine += w
+		}
+	}
+	if currLine > maxW {
+		maxW = currLine
+	}
+	return maxW
 }

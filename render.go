@@ -42,6 +42,9 @@ type Model struct {
 	Stylesheets []string // Additional CSS stylesheets
 	Width       int      // Terminal width in characters
 	RootPath    string   // Base path for local images
+	// LinkMode specifies the strategy for presenting hyperlinks (osc8, inline, footnotes).
+	LinkMode LinkMode
+
 	// DisableHyperlinks disables emitting OSC 8 ANSI hyperlinks for <a> tags.
 	DisableHyperlinks bool
 
@@ -51,6 +54,9 @@ type Model struct {
 	// MaxImageWidth caps image width in terminal columns (0 = default).
 	MaxImageWidth int
 
+	// MinImageWidth sets the minimum column width below which an image
+	// falls back to a Glamour placeholder when ImageModeSmart is active (default 12).
+	MinImageWidth int
 	// ColorMode specifies color depth.
 	ColorMode termimage.ColorMode
 
@@ -64,6 +70,9 @@ type Model struct {
 	// SyntaxTheme overrides the chroma highlighting style (e.g. "monokai",
 	// "dracula", "nord", "github-dark"). Empty picks a style from Theme.
 	SyntaxTheme string
+
+	// ImageMode specifies the rendering strategy for images (auto, glamour, placeholder).
+	ImageMode ImageMode
 
 	// DisableImages replaces images with [alt](src) text.
 	DisableImages bool
@@ -79,6 +88,12 @@ type Model struct {
 	// headingMarkerColor is the resolved --ts-heading-rule color used to tint the
 	// Markdown-style #/##/… markers around <h1>-<h6> text.
 	headingMarkerColor string
+
+	// heading1Marker is the custom marker format for H1 (e.g. "none" to omit).
+	heading1Marker string
+
+	// heading6MarkerColor is an optional marker color override for H6.
+	heading6MarkerColor string
 
 	// Step specifies the animation frame step for <spinner>, <shimmer>, .spinner, .shimmer.
 	Step int
@@ -371,9 +386,16 @@ func (m Model) renderWithOverlays(withOverlays bool) (string, []ImageOverlay, er
 
 	// Resolve the --ts-heading-rule color used to tint the heading markers.
 	m.headingMarkerColor = "#495057"
+	m.heading1Marker = "#"
 	if matcher.Preprocessor != nil {
 		if v, ok := matcher.Preprocessor.GlobalVars["--ts-heading-rule"]; ok && strings.TrimSpace(v) != "" {
 			m.headingMarkerColor = strings.TrimSpace(v)
+		}
+		if v, ok := matcher.Preprocessor.GlobalVars["--ts-heading-1-marker"]; ok {
+			m.heading1Marker = strings.TrimSpace(v)
+		}
+		if v, ok := matcher.Preprocessor.GlobalVars["--ts-heading-6"]; ok && strings.TrimSpace(v) != "" {
+			m.heading6MarkerColor = strings.TrimSpace(v)
 		}
 	}
 
@@ -434,6 +456,19 @@ func (m Model) renderWithOverlays(withOverlays bool) (string, []ImageOverlay, er
 		output = strings.Join(lines, "\n")
 	}
 
+	if m.LinkMode == LinkModeFootnotes && len(links) > 0 {
+		var fn strings.Builder
+		fn.WriteString("\n\n")
+		for i, u := range links {
+			ref := lipgloss.NewStyle().Foreground(lipgloss.Color("#767676")).Render(fmt.Sprintf("[%d]", i+1))
+			urlStyled := lipgloss.NewStyle().Foreground(lipgloss.Color("#008787")).Underline(true).Render(u)
+			if !m.DisableHyperlinks {
+				urlStyled = fmt.Sprintf("\x1b]8;id=fn_%d;%s\x1b\\%s\x1b]8;;\x1b\\", i, u, urlStyled)
+			}
+			fn.WriteString(fmt.Sprintf(" %s %s\n", ref, urlStyled))
+		}
+		output = strings.TrimRight(output, "\n") + fn.String()
+	}
 	return output, overlays, nil
 }
 
@@ -480,6 +515,14 @@ func applyInlineStyle(s ComputedStyle, text string) string {
 	}
 	if s.BgColor != "" {
 		ls = ls.Background(lipgloss.Color(s.BgColor))
+		hasStyle = true
+	}
+	if s.PaddingLeft > 0 {
+		ls = ls.PaddingLeft(s.PaddingLeft)
+		hasStyle = true
+	}
+	if s.PaddingRight > 0 {
+		ls = ls.PaddingRight(s.PaddingRight)
 		hasStyle = true
 	}
 
@@ -533,12 +576,8 @@ func (m Model) renderInline(node *RenderNode, currentX, currentY int, overlays *
 		sb.WriteString(m.renderInline(child, currentX, currentY, overlays, links))
 	}
 	content := applyInlineStyle(node.Style, sb.String())
-	if node.Tag == "a" && node.Href != "" && !m.DisableHyperlinks && links != nil {
-		id := len(*links)
-		*links = append(*links, node.Href)
-		startMarker := fmt.Sprintf("\x1b[999000;%dm", id)
-		endMarker := fmt.Sprintf("\x1b[999001;%dm", id)
-		content = startMarker + content + endMarker
+	if node.Tag == "a" && node.Href != "" {
+		content = m.decorateLink(content, node.Href, links)
 	}
 	return content
 }
@@ -699,7 +738,11 @@ func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]
 
 			wrapped := wrapText(trimmed, node.ContentWidth)
 			if lvl := headingLevel(node.Tag); lvl > 0 {
-				wrapped = decorateHeadingLines(wrapped, lvl, node.Style.TextAlign, m.headingMarkerColor)
+				hColor := m.headingMarkerColor
+				if lvl == 6 && m.heading6MarkerColor != "" {
+					hColor = m.heading6MarkerColor
+				}
+				wrapped = decorateHeadingLines(wrapped, lvl, node.Style.TextAlign, hColor, m.heading1Marker)
 			}
 
 
@@ -767,33 +810,38 @@ func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]
 		content = lipgloss.JoinVertical(lipgloss.Left, childOutputs...)
 	}
 	out := m.applyLipglossStyle(node.Style, node.LipglossWidth, targetHeight, content)
-	if node.Tag == "a" && node.Href != "" && !m.DisableHyperlinks && links != nil {
-		id := len(*links)
-		*links = append(*links, node.Href)
-		startMarker := fmt.Sprintf("\x1b[999000;%dm", id)
-		endMarker := fmt.Sprintf("\x1b[999001;%dm", id)
-		out = startMarker + out + endMarker
+	if node.Tag == "a" && node.Href != "" {
+		out = m.decorateLink(out, node.Href, links)
 	}
 	return out
 }
 
+func (m Model) renderGlamourImage(node *RenderNode) string {
+	alt := node.Alt
+	if alt == "" {
+		alt = "Image"
+	}
+	prefix := lipgloss.NewStyle().Foreground(lipgloss.Color("#767676")).Render("Image: " + alt + " →")
+	urlStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#ff87d7")).Underline(true)
+	urlText := urlStyle.Render(node.Src)
+	if !m.DisableHyperlinks && node.Src != "" {
+		urlText = fmt.Sprintf("\x1b]8;;%s\x1b\\%s\x1b]8;;\x1b\\", node.Src, urlText)
+	}
+	return prefix + "\n" + urlText
+}
+
 func (m Model) renderImageNode(node *RenderNode, x, y int, overlays *[]ImageOverlay) string {
-	if m.DisableImages {
+	if m.ImageMode == ImageModeGlamour {
+		return m.renderGlamourImage(node)
+	}
+
+	if m.DisableImages || m.ImageMode == ImageModePlaceholder {
 		if node.Alt != "" {
 			return "[" + node.Alt + "](" + node.Src + ")"
 		}
 		return "[Image](" + node.Src + ")"
 	}
 
-	img, err := m.loadImage(node.Src)
-	if err != nil {
-		if node.Alt != "" {
-			return "[" + node.Alt + "]"
-		}
-		return "[Image]"
-	}
-
-	renderer := m.imageRenderer()
 	imgWidth := node.ContentWidth
 	if m.MaxImageWidth > 0 && imgWidth > m.MaxImageWidth {
 		imgWidth = m.MaxImageWidth
@@ -801,6 +849,53 @@ func (m Model) renderImageNode(node *RenderNode, x, y int, overlays *[]ImageOver
 	if imgWidth < 1 {
 		imgWidth = 1
 	}
+
+	// Smart / Adaptive checks before image decoding
+	if m.ImageMode == ImageModeSmart {
+		minW := 12
+		if m.MinImageWidth > 0 {
+			minW = m.MinImageWidth
+		}
+		// 1. Column / content width too narrow for a recognizable terminal graphic
+		if imgWidth < minW {
+			return m.renderGlamourImage(node)
+		}
+
+		// 2. Vector SVG cannot be decoded by raster image.Decode
+		srcLower := strings.ToLower(node.Src)
+		if strings.HasSuffix(srcLower, ".svg") || strings.Contains(srcLower, ".svg?") {
+			return m.renderGlamourImage(node)
+		}
+	}
+
+	img, err := m.loadImage(node.Src)
+	if err != nil {
+		if m.ImageMode == ImageModeSmart {
+			return m.renderGlamourImage(node)
+		}
+		if node.Alt != "" {
+			return "[" + node.Alt + "]"
+		}
+		return "[Image]"
+	}
+
+	// Smart / Adaptive checks after image decoding
+	if m.ImageMode == ImageModeSmart {
+		bounds := img.Bounds()
+		w, h := bounds.Dx(), bounds.Dy()
+		// 3. Tiny native pixel dimensions (favicons, 1x1 tracking pixels, icons < 32px)
+		if w < 32 && h < 32 {
+			return m.renderGlamourImage(node)
+		}
+		// 4. Extreme aspect ratios (ultra-wide banner > 5:1 or ultra-vertical strip < 1:4)
+		if h > 0 && w > 0 {
+			ratio := float64(w) / float64(h)
+			if ratio > 5.0 || ratio < 0.25 {
+				return m.renderGlamourImage(node)
+			}
+		}
+	}
+	renderer := m.imageRenderer()
 
 	rendered, err := renderer.Render(img, imgWidth)
 	if err != nil {
@@ -1465,13 +1560,24 @@ func headingLevel(tag string) int {
 // Markdown-style marker (#, ##, …). Centered headings get the marker on both
 // sides of every line; right-aligned headings get it only on the right; any
 // other alignment gets it only on the left.
-func decorateHeadingLines(text string, level int, align lipgloss.Position, markerColor string) string {
+func decorateHeadingLines(text string, level int, align lipgloss.Position, markerColor string, h1Marker string) string {
 	marker := strings.Repeat("#", level)
-	if markerColor != "" {
+	if level == 1 {
+		if h1Marker == "none" || h1Marker == "empty" || h1Marker == "" {
+			marker = ""
+		} else if h1Marker != "#" {
+			marker = h1Marker
+		}
+	}
+	if marker != "" && markerColor != "" {
 		marker = lipgloss.NewStyle().Foreground(lipgloss.Color(markerColor)).Render(marker)
 	}
 	lines := strings.Split(text, "\n")
 	for i, l := range lines {
+		if marker == "" {
+			lines[i] = l
+			continue
+		}
 		switch align {
 		case lipgloss.Center:
 			lines[i] = marker + " " + l + " " + marker
@@ -1520,4 +1626,49 @@ func wrapText(text string, width int) string {
 		}
 	}
 	return strings.Join(lines, "\n")
+}
+
+func (m Model) decorateLink(content, href string, links *[]string) string {
+	if href == "" {
+		return content
+	}
+
+	switch m.LinkMode {
+	case LinkModeInline:
+		urlStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#008787")).Underline(true)
+		urlText := urlStyle.Render(href)
+		full := content + " " + urlText
+		if !m.DisableHyperlinks && links != nil {
+			id := len(*links)
+			*links = append(*links, href)
+			startMarker := fmt.Sprintf("\x1b[999000;%dm", id)
+			endMarker := fmt.Sprintf("\x1b[999001;%dm", id)
+			return startMarker + full + endMarker
+		}
+		return full
+
+	case LinkModeFootnotes:
+		if links != nil {
+			id := len(*links)
+			*links = append(*links, href)
+			ref := lipgloss.NewStyle().Foreground(lipgloss.Color("#767676")).Render(fmt.Sprintf("[%d]", id+1))
+			if !m.DisableHyperlinks {
+				startMarker := fmt.Sprintf("\x1b[999000;%dm", id)
+				endMarker := fmt.Sprintf("\x1b[999001;%dm", id)
+				return startMarker + content + endMarker + " " + ref
+			}
+			return content + " " + ref
+		}
+		return content
+
+	default: // LinkModeOSC8 or empty
+		if !m.DisableHyperlinks && links != nil {
+			id := len(*links)
+			*links = append(*links, href)
+			startMarker := fmt.Sprintf("\x1b[999000;%dm", id)
+			endMarker := fmt.Sprintf("\x1b[999001;%dm", id)
+			return startMarker + content + endMarker
+		}
+		return content
+	}
 }

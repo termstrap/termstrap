@@ -95,6 +95,7 @@ func TestEngine_Themes(t *testing.T) {
 		ThemeBootstrap:  "48;2;13;110;253",  // #0d6efd
 		ThemeTokyoNight: "48;2;121;162;247", // #7aa2f7
 		ThemeDracula:    "48;2;189;147;249", // #bd93f9
+		ThemeGlamour:    "48;2;95;95;255",   // #5f5fff
 	}
 	for th, expectedSeq := range expectedThemeColors {
 		m := New(html, WithWidth(80), WithTheme(th))

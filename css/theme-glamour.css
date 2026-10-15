@@ -1,0 +1,236 @@
+/* Glamour Theme Colors (Complete Bootstrap 5 & Glamour Markdown Overrides) */
+:root,
+[data-bs-theme=glamour] {
+  /* 1. Core Brand Colors (Glamour / Charm Palette) */
+  --bs-blue: #00afff;
+  --bs-indigo: #5f5fff;
+  --bs-purple: #b083ea;
+  --bs-pink: #ff5fd2;
+  --bs-red: #fd5b5b;
+  --bs-orange: #ff875f;
+  --bs-yellow: #ffff87;
+  --bs-green: #00d787;
+  --bs-teal: #008787;
+  --bs-cyan: #00afff;
+  --bs-black: #1a1a1a;
+  --bs-white: #f1f1f1;
+  --bs-gray: #676767;
+  --bs-gray-dark: #373737;
+
+  /* 2. Theme Semantic Palette */
+  --bs-primary: #5f5fff;
+  --bs-secondary: #676767;
+  --bs-success: #00d787;
+  --bs-info: #00afff;
+  --bs-warning: #ffff87;
+  --bs-danger: #fd5b5b;
+  --bs-light: #d0d0d0;
+  --bs-dark: #202020;
+
+  /* 3. RGB Components (Used by RGBA utility classes) */
+  --bs-primary-rgb: 95, 95, 255;
+  --bs-secondary-rgb: 103, 103, 103;
+  --bs-success-rgb: 0, 215, 135;
+  --bs-info-rgb: 0, 175, 255;
+  --bs-warning-rgb: 255, 255, 135;
+  --bs-danger-rgb: 253, 91, 91;
+  --bs-light-rgb: 208, 208, 208;
+  --bs-dark-rgb: 32, 32, 32;
+  --bs-white-rgb: 241, 241, 241;
+  --bs-black-rgb: 26, 26, 26;
+
+  /* 4. Canvas & Typography */
+  --bs-body-color: #d0d0d0;
+  --bs-body-color-rgb: 208, 208, 208;
+  --bs-body-bg: #1e1e24;
+  --bs-body-bg-rgb: 30, 30, 36;
+  --bs-emphasis-color: #ffffff;
+  --bs-secondary-color: #00afff;
+  --bs-secondary-bg: #2a2a2a;
+  --bs-tertiary-color: #676767;
+  --bs-tertiary-bg: #222222;
+  --bs-border-color: #585858;
+  --bs-heading-color: #00afff;
+  --bs-link-color: #00af5f;
+  --bs-link-hover-color: #00d787;
+  --bs-code-color: #ff5f5f;
+  --bs-highlight-bg: #ffff87;
+  --bs-highlight-color: #1a1a1a;
+
+  /* Syntax highlighting (Glamour Chroma charter) */
+  --ts-code-bg: #2a2a2a;
+  --ts-code-inline-bg: #303030;
+  --ts-code-inline-fg: #ff5f5f;
+  --ts-code-name: #c4c4c4;
+  --ts-code-keyword: #00aaff;
+  --ts-code-function: #00d787;
+  --ts-code-type: #6e6ed8;
+  --ts-code-builtin: #ff8ec7;
+  --ts-code-string: #c69669;
+  --ts-code-number: #6eefc0;
+  --ts-code-comment: #676767;
+  --ts-code-operator: #ef8080;
+  --ts-code-variable: #c4c4c4;
+  --ts-code-constant: #6eefc0;
+  --ts-code-tag: #b083ea;
+  --ts-code-attribute: #7a7ae6;
+  --ts-code-regex: #afffd7;
+  --ts-code-escape: #afffd7;
+  --ts-code-deleted: #fd5b5b;
+  --ts-code-inserted: #00d787;
+  --ts-code-heading: #00aaff;
+
+  /* Document chrome surfaces */
+  --ts-link-color: #00af5f;
+  --ts-hr-color: #585858;
+  --ts-blockquote-color: #d0d0d0;
+  --ts-blockquote-border: #676767;
+
+  /* Heading hierarchy (Glamour charter) */
+  --ts-heading-1: #ffff87;
+  --ts-heading-2: #00afff;
+  --ts-heading-3: #00afff;
+  --ts-heading-4: #00afff;
+  --ts-heading-5: #00afff;
+  --ts-heading-6: #00af5f;
+  --ts-heading-rule: #00afff;
+  --ts-heading-1-marker: none;
+
+  /* 5. Text Emphasis Variants */
+  --bs-primary-text-emphasis: #5f5fff;
+  --bs-secondary-text-emphasis: #676767;
+  --bs-success-text-emphasis: #00d787;
+  --bs-info-text-emphasis: #00afff;
+  --bs-warning-text-emphasis: #ffff87;
+  --bs-danger-text-emphasis: #fd5b5b;
+  --bs-light-text-emphasis: #d0d0d0;
+  --bs-dark-text-emphasis: #676767;
+
+  /* 6. Subtle Backgrounds (Used by alerts, cards, subtle badges) */
+  --bs-primary-bg-subtle: #262445;
+  --bs-secondary-bg-subtle: #252525;
+  --bs-success-bg-subtle: #193325;
+  --bs-info-bg-subtle: #162d3a;
+  --bs-warning-bg-subtle: #33321d;
+  --bs-danger-bg-subtle: #381e1e;
+  --bs-light-bg-subtle: #262626;
+  --bs-dark-bg-subtle: #151515;
+
+  /* 7. Subtle Borders */
+  --bs-primary-border-subtle: #4a4480;
+  --bs-secondary-border-subtle: #4a4a4a;
+  --bs-success-border-subtle: #205c3b;
+  --bs-info-border-subtle: #205670;
+  --bs-warning-border-subtle: #66642e;
+  --bs-danger-border-subtle: #732929;
+  --bs-light-border-subtle: #4a4a4a;
+  --bs-dark-border-subtle: #262626;
+}
+
+/* 8. Component Overrides */
+h1 {
+  background-color: #5f5fff !important;
+  color: #ffff87 !important;
+  font-weight: bold !important;
+  padding: 0 1 !important;
+  margin-bottom: 1 !important;
+  width: fit-content;
+}
+
+h2,
+h3,
+h4,
+h5 {
+  color: #00afff !important;
+  font-weight: bold !important;
+}
+
+h6 {
+  color: #00af5f !important;
+  font-weight: normal !important;
+  font-style: normal !important;
+}
+
+a {
+  color: var(--ts-link-color) !important;
+  font-weight: bold !important;
+  text-decoration: underline !important;
+}
+
+blockquote {
+  color: var(--ts-blockquote-color) !important;
+  border-left: 1px solid var(--ts-blockquote-border) !important;
+  padding-left: 1 !important;
+  font-style: italic;
+}
+
+code {
+  background-color: var(--ts-code-inline-bg) !important;
+  color: var(--ts-code-inline-fg) !important;
+  padding: 0 1 !important;
+}
+
+pre {
+  background-color: var(--ts-code-bg) !important;
+  color: var(--ts-code-name) !important;
+  padding: 0 1 !important;
+}
+
+table,
+.table {
+  border-color: #585858 !important;
+  color: #d0d0d0 !important;
+}
+
+th {
+  font-weight: bold !important;
+  color: #00afff !important;
+}
+
+td {
+  color: #d0d0d0 !important;
+}
+
+hr {
+  border-color: var(--ts-hr-color) !important;
+}
+
+.text-primary {
+  color: #5f5fff !important;
+}
+
+.text-secondary {
+  color: #676767 !important;
+}
+
+.text-success {
+  color: #00d787 !important;
+}
+
+.text-danger {
+  color: #fd5b5b !important;
+}
+
+.text-warning {
+  color: #ffff87 !important;
+}
+
+.text-info {
+  color: #00afff !important;
+}
+
+.text-light {
+  color: #d0d0d0 !important;
+}
+
+.text-dark {
+  color: #202020 !important;
+}
+
+.text-white {
+  color: #ffffff !important;
+}
+
+.text-muted {
+  color: #676767 !important;
+}

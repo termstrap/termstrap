@@ -39,10 +39,16 @@ func DefaultUnitContext(termWidth int) UnitContext {
 	}
 }
 
+// LengthFitContent indicates that an element width should shrink-wrap to its content.
+const LengthFitContent = -1
+
 // ResolveLength converts any CSS length (px, rem, em, pt, in, ch, %, vw, vh, unitless)
 // to terminal discrete units (character columns for AxisX, lines for AxisY).
 func ResolveLength(val string, axis Axis, ctx UnitContext) int {
 	val = strings.TrimSpace(val)
+	if val == "fit-content" || val == "max-content" || val == "min-content" {
+		return LengthFitContent
+	}
 	if val == "" || val == "auto" || val == "inherit" || val == "initial" {
 		return 0
 	}
