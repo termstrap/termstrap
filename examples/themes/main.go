@@ -1,5 +1,5 @@
 // Example: themes — Demonstrates rendering the same HTML structure
-// across different built-in color themes (Bootstrap, Tokyo Night, Dracula).
+// across different built-in color themes (Bootstrap, Tokyo Night, Dracula, Glamour).
 //
 // Usage:
 //
@@ -33,7 +33,7 @@ func main() {
       <div class="p-2 bg-dark rounded">
         <h3>Code & Details</h3>
         <p>Inline command: <code>go run ./main.go</code></p>
-        <blockquote>Tokyo Night, Dracula, and Bootstrap themes adapt automatically.</blockquote>
+        <blockquote>Tokyo Night, Dracula, Bootstrap, and Glamour themes adapt automatically.</blockquote>
         <div class="p-1 bg-secondary rounded mt-1">
           <span class="text-warning">Warning text</span> | <span class="text-success">Success text</span> | <span class="text-info">Info text</span>
         </div>
@@ -49,6 +49,7 @@ func main() {
 		{name: "Default / Bootstrap Theme", theme: termstrap.ThemeBootstrap},
 		{name: "Tokyo Night Theme", theme: termstrap.ThemeTokyoNight},
 		{name: "Dracula Theme", theme: termstrap.ThemeDracula},
+		{name: "Glamour Theme", theme: termstrap.ThemeGlamour},
 	}
 
 	for _, t := range themes {
