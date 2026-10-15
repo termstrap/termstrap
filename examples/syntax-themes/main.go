@@ -15,7 +15,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/go-scripts/termstrap"
+	"github.com/termstrap/termstrap"
 	"golang.org/x/term"
 )
 
@@ -23,7 +23,7 @@ const content = `
 <h3>Highlighting &amp; chrome</h3>
 
 <p>Inline <code>termstrap.New()</code> plus a block below. See the
-<a href="https://github.com/go-scripts/termstrap">project link</a> color.</p>
+<a href="https://github.com/termstrap/termstrap">project link</a> color.</p>
 
 <pre><code class="language-go">package main
 

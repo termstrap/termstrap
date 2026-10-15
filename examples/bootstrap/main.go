@@ -16,7 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/go-scripts/termstrap"
+	"github.com/termstrap/termstrap"
 	"golang.org/x/term"
 )
 

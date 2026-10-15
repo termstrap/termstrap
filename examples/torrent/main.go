@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/go-scripts/termstrap"
+	"github.com/termstrap/termstrap"
 )
 
 func main() {

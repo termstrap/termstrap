@@ -27,7 +27,7 @@ import (
 	"image"
 	"os"
 
-	termimage "github.com/go-scripts/termstrap/image"
+	termimage "github.com/termstrap/termstrap/image"
 	"golang.org/x/term"
 )
 

@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/go-scripts/termstrap"
+	"github.com/termstrap/termstrap"
 	"golang.org/x/term"
 )
 

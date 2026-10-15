@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/go-scripts/termstrap"
+	"github.com/termstrap/termstrap"
 	"golang.org/x/term"
 )
 
@@ -37,7 +37,7 @@ const document = `<div class="container p-1">
     and highlighted <span class="text-warning">warning</span> or <span class="text-info">informational</span> spans.
   </p>
   <p>
-    Execute commands inline with <code>go get github.com/go-scripts/termstrap</code> or review
+    Execute commands inline with <code>go get github.com/termstrap/termstrap</code> or review
     <code>termstrap.WithTheme(termstrap.ThemeGlamour)</code>.
   </p>
 
@@ -79,7 +79,7 @@ const document = `<div class="container p-1">
     <div class="col-md-6">
       <p class="fw-bold">Getting Started (Ordered):</p>
       <ol>
-        <li>Import <code>github.com/go-scripts/termstrap</code></li>
+        <li>Import <code>github.com/termstrap/termstrap</code></li>
         <li>Configure layout options via <code>WithWidth()</code></li>
         <li>Select <code>WithTheme(ThemeGlamour)</code></li>
         <li>Call <code>m.Render()</code> and print to stdout</li>
@@ -131,7 +131,7 @@ const document = `<div class="container p-1">
 import (
 	"fmt"
 
-	"github.com/go-scripts/termstrap"
+	"github.com/termstrap/termstrap"
 )
 
 // main initializes TermStrap with the Glamour visual theme.
