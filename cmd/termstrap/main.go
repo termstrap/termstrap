@@ -12,23 +12,23 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/go-scripts/termstrap"
-	termimage "github.com/go-scripts/termstrap/image"
+	"github.com/termstrap/termstrap"
+	termimage "github.com/termstrap/termstrap/image"
 	"golang.org/x/term"
 )
 
 func main() {
 	var (
-		widthFlag       int
-		themeFlag       string
-		rootPathFlag    string
-		colorModeFlag   string
-		protocolFlag    string
-		cssFileFlag     string
-		disableImgFlag  bool
-		optimizeSeqFlag bool
-		watchFlag       bool
-		linkModeFlag    string
+		widthFlag         int
+		themeFlag         string
+		rootPathFlag      string
+		colorModeFlag     string
+		protocolFlag      string
+		cssFileFlag       string
+		disableImgFlag    bool
+		optimizeSeqFlag   bool
+		watchFlag         bool
+		linkModeFlag      string
 		imageModeFlag     string
 		minImageWidthFlag int
 		presetFlag        string
@@ -138,7 +138,7 @@ func main() {
 	} else {
 		// Read from stdin
 		stat, _ := os.Stdin.Stat()
-		if (stat.Mode() & os.ModeCharDevice) != 0 && (len(nonFlags) == 0 || nonFlags[0] != "-") {
+		if (stat.Mode()&os.ModeCharDevice) != 0 && (len(nonFlags) == 0 || nonFlags[0] != "-") {
 			flag.Usage()
 			os.Exit(1)
 		}
