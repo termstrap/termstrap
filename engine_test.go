@@ -11,8 +11,9 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/colorprofile"
-	"github.com/go-scripts/termstrap/testutil"
+	"github.com/termstrap/termstrap/testutil"
 )
+
 func TestEngine_SimpleDivAndMargins(t *testing.T) {
 	html := `<div class="m-3 p-2 bg-dark text-white">Hello Termstrap</div>`
 	m := New(html, WithWidth(80))
@@ -416,7 +417,6 @@ func TestEngine_CascadeInheritance_UnsetAndOverride(t *testing.T) {
 		t.Fatalf("Expected output to contain 'Unset Bold', got:\n%q", out)
 	}
 }
-
 
 func TestEngine_OSC8Hyperlinks(t *testing.T) {
 	html := `<p>Visit <a href="https://example.com">Example Site</a> today!</p>`

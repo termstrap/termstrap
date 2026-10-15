@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-scripts/termstrap/testutil"
+	"github.com/termstrap/termstrap/testutil"
 )
 
 func TestE2E_ResponsiveStackingVsSideBySide(t *testing.T) {
@@ -266,7 +266,7 @@ func TestE2E_NestedCardsAndBorders(t *testing.T) {
 func TestE2E_Hyperlinks(t *testing.T) {
 	html := `<div class="p-1 border rounded">
 		<h1>Resources</h1>
-		<p>Check the <a href="https://github.com/go-scripts/termstrap">Official Repo</a> or <a href="https://pkg.go.dev">Go Docs</a>.</p>
+		<p>Check the <a href="https://github.com/termstrap/termstrap">Official Repo</a> or <a href="https://pkg.go.dev">Go Docs</a>.</p>
 	</div>`
 
 	m := New(html, WithWidth(80))
@@ -284,7 +284,7 @@ func TestE2E_Hyperlinks(t *testing.T) {
 	screen.AssertText(t, 2, 3, "Check the Official Repo or Go Docs.")
 
 	// Verify OSC 8 sequence presence in the raw terminal output
-	expectedRepo := "\x1b]8;id=link_0;https://github.com/go-scripts/termstrap\x1b\\"
+	expectedRepo := "\x1b]8;id=link_0;https://github.com/termstrap/termstrap\x1b\\"
 	expectedDocs := "\x1b]8;id=link_1;https://pkg.go.dev\x1b\\"
 	expectedEnd := "\x1b]8;;\x1b\\"
 	if !strings.Contains(out, expectedRepo) {
