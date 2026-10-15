@@ -1,7 +1,7 @@
 # Termstrap 🚀
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/go-scripts/termstrap.svg)](https://pkg.go.dev/github.com/go-scripts/termstrap)
-[![Go Report Card](https://goreportcard.com/badge/github.com/go-scripts/termstrap)](https://goreportcard.com/report/github.com/go-scripts/termstrap)
+[![Go Reference](https://pkg.go.dev/badge/github.com/termstrap/termstrap.svg)](https://pkg.go.dev/github.com/termstrap/termstrap)
+[![Go Report Card](https://goreportcard.com/badge/github.com/termstrap/termstrap)](https://goreportcard.com/report/github.com/termstrap/termstrap)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **Termstrap** is a modern, pure **HTML/CSS terminal rendering engine** written in Go. It allows you to build rich, responsive command-line and TUI interfaces using standard HTML markup, a built-in Bootstrap CSS utility framework, custom stylesheets, and multi-protocol terminal graphics (**Kitty**, **iTerm2**, **Sixel**, and **Half-Block Unicode**).
@@ -39,7 +39,7 @@ Building multi-column, styled terminal layouts has traditionally been tedious—
 ## 📦 Installation
 
 ```bash
-go get github.com/go-scripts/termstrap
+go get github.com/termstrap/termstrap
 ```
 
 Requires **Go 1.21+**.
@@ -57,7 +57,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/go-scripts/termstrap"
+	"github.com/termstrap/termstrap"
 )
 
 func main() {
@@ -248,7 +248,7 @@ type Model struct {
 
 When integrating Termstrap with [Bubble Tea](https://github.com/charmbracelet/bubbletea), native terminal graphics (iTerm2, Kitty, Sixel) can be fragmented by Bubble Tea's cell buffer (`ultraviolet`).
 
-The `github.com/go-scripts/termstrap/bubbletea` adapter solves this by separating layout text from out-of-band graphics sequences:
+The `github.com/termstrap/termstrap/bubbletea` adapter solves this by separating layout text from out-of-band graphics sequences:
 
 ```go
 package main
@@ -258,8 +258,8 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/go-scripts/termstrap"
-	tsbubble "github.com/go-scripts/termstrap/bubbletea"
+	"github.com/termstrap/termstrap"
+	tsbubble "github.com/termstrap/termstrap/bubbletea"
 )
 
 type model struct {

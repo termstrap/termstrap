@@ -550,7 +550,7 @@ package main
 
 import (
     "fmt"
-    "github.com/go-scripts/termstrap"
+    "github.com/termstrap/termstrap"
 )
 
 func main() {

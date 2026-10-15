@@ -2,7 +2,7 @@
 
 ## Projet
 
-**termstrap** est une bibliothèque Go (`github.com/go-scripts/termstrap`) qui fournit un système de layout Bootstrap-like pour le terminal. Elle combine le rendu Markdown (glamour), un grid system 12 colonnes responsive, et un rendu d'images multi-protocole.
+**termstrap** est une bibliothèque Go (`github.com/termstrap/termstrap`) qui fournit un système de layout Bootstrap-like pour le terminal. Elle combine le rendu Markdown (glamour), un grid system 12 colonnes responsive, et un rendu d'images multi-protocole.
 
 ## Stack Technique
 
@@ -127,4 +127,4 @@ image/              → Sous-package : rendu images multi-protocole
 - **Ne jamais committer de binaires compilés** — le `.gitignore` les exclut.
 - **Toujours tester la compilation** (`go build ./...`) avant de proposer un commit.
 - **Préférer les value receivers** sur `Model` (pas de mutation).
-- **Imports aliasés** : `termimage "github.com/go-scripts/termstrap/image"` partout dans le package principal.
+- **Imports aliasés** : `termimage "github.com/termstrap/termstrap/image"` partout dans le package principal.
