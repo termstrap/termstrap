@@ -7,7 +7,7 @@ import (
 	"github.com/alecthomas/chroma/v2/formatters"
 	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/alecthomas/chroma/v2/styles"
-	termimage "github.com/go-scripts/termstrap/image"
+	termimage "github.com/termstrap/termstrap/image"
 )
 
 // Syntax token CSS custom properties. Themes override these in their stylesheet

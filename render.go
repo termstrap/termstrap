@@ -17,13 +17,13 @@ import (
 
 	_ "golang.org/x/image/webp"
 
-	"github.com/alecthomas/chroma/v2"
-	"github.com/PuerkitoBio/goquery"
 	"charm.land/lipgloss/v2"
+	"github.com/PuerkitoBio/goquery"
+	"github.com/alecthomas/chroma/v2"
 	"github.com/charmbracelet/colorprofile"
-	termimage "github.com/go-scripts/termstrap/image"
 	"github.com/muesli/reflow/wordwrap"
 	"github.com/muesli/reflow/wrap"
+	termimage "github.com/termstrap/termstrap/image"
 )
 
 // ImageOverlay represents an image escape sequence separated from the text.
@@ -562,7 +562,6 @@ func (m Model) renderInline(node *RenderNode, currentX, currentY int, overlays *
 		return m.renderAsciiNode(node, currentX, currentY, 0)
 	}
 
-
 	if node.Tag == "br" {
 		return "\n"
 	}
@@ -609,7 +608,6 @@ func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]
 	if node.Tag == "ascii" {
 		return m.renderAsciiNode(node, currentX, currentY, targetHeight)
 	}
-
 
 	if node.Type == NodeText {
 		return node.Text
@@ -744,7 +742,6 @@ func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]
 				}
 				wrapped = decorateHeadingLines(wrapped, lvl, node.Style.TextAlign, hColor, m.heading1Marker)
 			}
-
 
 			if node.Tag == "li" {
 				lines := strings.Split(wrapped, "\n")
@@ -1009,7 +1006,6 @@ func (m Model) renderAsciiNode(node *RenderNode, currentX, currentY, targetHeigh
 	}
 	return m.applyLipglossStyle(styleCopy, node.LipglossWidth, targetHeight, asciiText)
 }
-
 
 func (m Model) loadImage(src string) (image.Image, error) {
 	if strings.HasPrefix(src, "http://") || strings.HasPrefix(src, "https://") {

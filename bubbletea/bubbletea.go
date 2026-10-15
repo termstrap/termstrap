@@ -29,7 +29,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/go-scripts/termstrap"
+	"github.com/termstrap/termstrap"
 )
 
 // RenderResult holds the output of a termstrap render separated into

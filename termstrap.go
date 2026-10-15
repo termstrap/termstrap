@@ -3,7 +3,7 @@ package termstrap
 import (
 	"time"
 
-	termimage "github.com/go-scripts/termstrap/image"
+	termimage "github.com/termstrap/termstrap/image"
 )
 
 // Theme represents a visual color scheme.

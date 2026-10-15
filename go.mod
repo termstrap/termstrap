@@ -1,4 +1,4 @@
-module github.com/go-scripts/termstrap
+module github.com/termstrap/termstrap
 
 go 1.25.0
 
