@@ -185,7 +185,7 @@ Les blocs `<pre>` sont colorés syntaxiquement via [chroma](https://github.com/a
 
 - **Détection automatique** : sans classe de langage, le langage est déduit du contenu (`lexers.Analyse`). Un `<pre><code>…</code></pre>` nu est donc coloré automatiquement.
 
-- **Couleurs pilotées par CSS (charte du thème)** : la palette de coloration est définie par des variables CSS `--ts-code-*`. Les défauts (dans `css/termstrap.css`) s'accordent aux couleurs sémantiques Bootstrap sur le fond sombre du `<pre>` ; chaque thème (`dracula`, `tokyonight`) surcharge ces variables selon sa charte graphique dans son propre `css/theme-*.css`. On peut aussi les surcharger via `WithStylesheets(...)` :
+- **Couleurs pilotées par CSS (charte du thème)** : la palette de coloration est définie par des variables CSS `--ts-code-*`. Les défauts (dans `css/termstrap.css`) s'accordent aux couleurs sémantiques Bootstrap sur le fond sombre du `<pre>` ; chaque thème (`dracula`, `tokyonight`, `glamour`) surcharge ces variables selon sa charte graphique dans son propre `css/theme-*.css`. On peut aussi les surcharger via `WithStylesheets(...)` :
 
   ```css
   :root {
@@ -372,6 +372,54 @@ for step := range 50 {
   - `termstrap.Spinner(step int, frames ...[]string) string`
 
 
+
+## 8quater. Thème Glamour & Stratégies d'Affichage (Liens & Images)
+
+TermStrap intègre le thème **Glamour** (`ThemeGlamour`) reprenant la charte graphique de Charmbracelet (Glow / Glamour), tout en découplant la présentation visuelle des stratégies d'affichage des liens et des images.
+
+### 1. Charte Visuelle Glamour (`ThemeGlamour`)
+- **`<h1>`** : bandeau violet royal / indigo (`#5f5fff`), texte jaune vif (`#ffff87`) en gras, ajusté à la taille du texte (`width: fit-content`), sans marqueur `#`.
+- **`<h2>` à `<h5>`** : cyan électrique (`#00afff`) avec marqueurs `## `…`##### `.
+- **`<h6>`** : vert émeraude (`#00af5f`) avec marqueur `###### ` et graisse standard.
+- **`<blockquote>`** : barre latérale `│` avec retrait de 1 espace, texte en italique.
+- **`<code>` inline** : texte corail (`#ff5f5f`) sur fond sombre (`#303030`).
+- **`<pre>`** : fond `#2a2a2a` et coloration Chroma Glamour complète.
+- **`<table>`** : bordures `#585858`, en-tête en gras cyan `#00afff`.
+
+### 2. Stratégies de Liens (`LinkMode`)
+- **`LinkModeOSC8`** *(défaut)* : hyperliens terminaux cliquables natifs sans URL apparente.
+- **`LinkModeInline`** : affiche le texte du lien suivi de l'URL brute (`Texte https://...`).
+- **`LinkModeFootnotes`** : insère des numéros de référence (`Texte [1]`) et liste les URLs en fin de document.
+
+```go
+termstrap.New(html, termstrap.WithLinkMode(termstrap.LinkModeFootnotes))
+```
+
+### 3. Stratégies d'Images (`ImageMode`)
+- **`ImageModeAuto`** *(défaut)* : rendu graphique matériel complet (Kitty, iTerm2, Sixel, Half-blocks). Comportement natif non contraint.
+- **`ImageModeSmart`** *(adaptatif)* : rendu graphique quand c'est optimal, avec bascule automatique sur le placeholder Glamour (`Image: alt → src`) si l'affichage graphique est dégradé :
+  - Largeur de colonne trop étroite (`< 12` colonnes par défaut, configurable via `WithMinImageWidth(cols)`).
+  - Image native microscopique (`< 32×32 px`, ex. favicons ou pixels de tracking).
+  - Rapport d'aspect extrême (`ratio > 5:1` ou `< 1:4`).
+  - Format vectoriel non rastérisé (`.svg`).
+  - Erreur de chargement réseau ou fichier introuvable (404).
+- **`ImageModeGlamour`** : remplace toutes les images par des placeholders Glamour textuels.
+- **`ImageModePlaceholder`** : placeholders Markdown simples `[alt](src)`.
+
+```go
+// Rendu adaptatif intelligent (opt-in)
+termstrap.New(html,
+    termstrap.WithTheme(termstrap.ThemeGlamour),
+    termstrap.WithImageMode(termstrap.ImageModeSmart),
+    termstrap.WithMinImageWidth(15),
+)
+```
+
+### 4. Preset Tout-en-un
+```go
+// Active le thème Glamour + liens inline + placeholders images
+termstrap.New(html, termstrap.WithGlamourPreset())
+```
 ## 8quinquies. Bannières ASCII Art (`<ascii>`)
 
 La balise `<ascii>` permet de générer des bannières texte en ASCII art (polices FIGlet) intégrées au flux HTML/CSS :
