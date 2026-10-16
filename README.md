@@ -379,6 +379,14 @@ TERMSTRAP_IMAGE_PROTOCOL=kitty go run ./examples/image/three-columns/
 # Force Sixel graphics
 TERMSTRAP_IMAGE_PROTOCOL=sixel go run ./examples/image/three-columns/
 ```
+---
+## Sources
+### How to make rendering engine
+- https://web.dev/articles/howbrowserswork?utm_source=gemini
+- https://developer.mozilla.org/fr/docs/Web/Performance/Guides/How_browsers_work
+- https://www.w3.org/TR/css-syntax-3/?utm_source=gemini
+- https://www.w3.org/TR/css-cascade/
+
 
 ---
 
