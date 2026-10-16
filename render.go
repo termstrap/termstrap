@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	_ "image/gif"
+	"image/gif"
 	_ "image/jpeg"
 	_ "image/png"
 
@@ -532,7 +532,7 @@ func applyInlineStyle(s ComputedStyle, text string) string {
 	return text
 }
 
-func (m Model) renderInline(node *RenderNode, currentX, currentY int, overlays *[]ImageOverlay, links *[]string) string {
+func (m Model) renderInline(node *RenderNode, currentX, currentY int, overlays *[]ImageOverlay, links *[]string, inLink bool) string {
 	if node == nil {
 		return ""
 	}
@@ -567,14 +567,33 @@ func (m Model) renderInline(node *RenderNode, currentX, currentY int, overlays *
 	}
 
 	if node.Type == NodeImage {
-		return m.renderImageNode(node, currentX, currentY, overlays)
+		return m.renderImageNode(node, currentX, currentY, overlays, links, inLink)
 	}
 
+	linkActive := inLink || (node.Tag == "a" && node.Href != "")
+
 	var sb strings.Builder
+	hasRawImage := false
 	for _, child := range node.Children {
-		sb.WriteString(m.renderInline(child, currentX, currentY, overlays, links))
+		if child.Type == NodeImage && !linkActive {
+			hasRawImage = true
+		}
+		sb.WriteString(m.renderInline(child, currentX, currentY, overlays, links, linkActive))
 	}
-	content := applyInlineStyle(node.Style, sb.String())
+	content := sb.String()
+	if !hasRawImage && (node.Style.PaddingLeft > 0 || node.Style.PaddingRight > 0 || node.Style.BgColor != "") {
+		ls := lipgloss.NewStyle()
+		if node.Style.PaddingLeft > 0 {
+			ls = ls.PaddingLeft(node.Style.PaddingLeft)
+		}
+		if node.Style.PaddingRight > 0 {
+			ls = ls.PaddingRight(node.Style.PaddingRight)
+		}
+		if node.Style.BgColor != "" {
+			ls = ls.Background(lipgloss.Color(node.Style.BgColor))
+		}
+		content = ls.Render(content)
+	}
 	if node.Tag == "a" && node.Href != "" {
 		content = m.decorateLink(content, node.Href, links)
 	}
@@ -614,7 +633,7 @@ func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]
 	}
 
 	if node.Type == NodeImage {
-		return m.renderImageNode(node, currentX, currentY, overlays)
+		return m.renderImageNode(node, currentX, currentY, overlays, links, false)
 	}
 
 	if node.Tag == "ul" || node.Tag == "ol" {
@@ -724,7 +743,7 @@ func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]
 			}
 			var sb strings.Builder
 			for _, inlineNode := range inlineRun {
-				sb.WriteString(m.renderInline(inlineNode, blockX, blockY, overlays, links))
+				sb.WriteString(m.renderInline(inlineNode, blockX, blockY, overlays, links, false))
 			}
 			inlineRun = nil
 
@@ -813,23 +832,37 @@ func (m Model) renderNode(node *RenderNode, currentX, currentY int, overlays *[]
 	return out
 }
 
-func (m Model) renderGlamourImage(node *RenderNode) string {
+func (m Model) renderGlamourImage(node *RenderNode, links *[]string, inLink bool) string {
 	alt := node.Alt
 	if alt == "" {
 		alt = "Image"
 	}
+	if inLink {
+		return "[" + alt + "]"
+	}
 	prefix := lipgloss.NewStyle().Foreground(lipgloss.Color("#767676")).Render("Image: " + alt + " →")
 	urlStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#ff87d7")).Underline(true)
 	urlText := urlStyle.Render(node.Src)
-	if !m.DisableHyperlinks && node.Src != "" {
-		urlText = fmt.Sprintf("\x1b]8;;%s\x1b\\%s\x1b]8;;\x1b\\", node.Src, urlText)
+	if !m.DisableHyperlinks && node.Src != "" && links != nil {
+		id := len(*links)
+		*links = append(*links, node.Src)
+		startMarker := fmt.Sprintf("\x1b[999000;%dm", id)
+		endMarker := fmt.Sprintf("\x1b[999001;%dm", id)
+		urlText = startMarker + urlText + endMarker
 	}
-	return prefix + "\n" + urlText
+	return prefix + " " + urlText
 }
 
-func (m Model) renderImageNode(node *RenderNode, x, y int, overlays *[]ImageOverlay) string {
+func (m Model) renderImageNode(node *RenderNode, x, y int, overlays *[]ImageOverlay, links *[]string, inLink bool) string {
+	if inLink {
+		if node.Alt != "" {
+			return "[" + node.Alt + "]"
+		}
+		return "[Image]"
+	}
+
 	if m.ImageMode == ImageModeGlamour {
-		return m.renderGlamourImage(node)
+		return m.renderGlamourImage(node, links, inLink)
 	}
 
 	if m.DisableImages || m.ImageMode == ImageModePlaceholder {
@@ -855,20 +888,20 @@ func (m Model) renderImageNode(node *RenderNode, x, y int, overlays *[]ImageOver
 		}
 		// 1. Column / content width too narrow for a recognizable terminal graphic
 		if imgWidth < minW {
-			return m.renderGlamourImage(node)
+			return m.renderGlamourImage(node, links, inLink)
 		}
 
 		// 2. Vector SVG cannot be decoded by raster image.Decode
 		srcLower := strings.ToLower(node.Src)
 		if strings.HasSuffix(srcLower, ".svg") || strings.Contains(srcLower, ".svg?") {
-			return m.renderGlamourImage(node)
+			return m.renderGlamourImage(node, links, inLink)
 		}
 	}
 
 	img, err := m.loadImage(node.Src)
 	if err != nil {
 		if m.ImageMode == ImageModeSmart {
-			return m.renderGlamourImage(node)
+			return m.renderGlamourImage(node, links, inLink)
 		}
 		if node.Alt != "" {
 			return "[" + node.Alt + "]"
@@ -882,13 +915,13 @@ func (m Model) renderImageNode(node *RenderNode, x, y int, overlays *[]ImageOver
 		w, h := bounds.Dx(), bounds.Dy()
 		// 3. Tiny native pixel dimensions (favicons, 1x1 tracking pixels, icons < 32px)
 		if w < 32 && h < 32 {
-			return m.renderGlamourImage(node)
+			return m.renderGlamourImage(node, links, inLink)
 		}
 		// 4. Extreme aspect ratios (ultra-wide banner > 5:1 or ultra-vertical strip < 1:4)
 		if h > 0 && w > 0 {
 			ratio := float64(w) / float64(h)
 			if ratio > 5.0 || ratio < 0.25 {
-				return m.renderGlamourImage(node)
+			return m.renderGlamourImage(node, links, inLink)
 			}
 		}
 	}
@@ -1008,28 +1041,54 @@ func (m Model) renderAsciiNode(node *RenderNode, currentX, currentY, targetHeigh
 }
 
 func (m Model) loadImage(src string) (image.Image, error) {
+	var r io.Reader
 	if strings.HasPrefix(src, "http://") || strings.HasPrefix(src, "https://") {
 		resp, err := http.Get(src)
 		if err != nil {
 			return nil, err
 		}
 		defer resp.Body.Close()
-		img, _, err := image.Decode(resp.Body)
-		return img, err
+		data, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		r = strings.NewReader(string(data))
+	} else {
+		path := src
+		if m.RootPath != "" && !filepath.IsAbs(path) {
+			path = filepath.Join(m.RootPath, path)
+		}
+		f, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		data, err := io.ReadAll(f)
+		if err != nil {
+			return nil, err
+		}
+		r = strings.NewReader(string(data))
 	}
 
-	path := src
-	if m.RootPath != "" && !filepath.IsAbs(path) {
-		path = filepath.Join(m.RootPath, path)
+	// If the image is a GIF, try decoding all frames to select the frame corresponding to m.Step.
+	// GIF header starts with "GIF87a" or "GIF89a".
+	if g, err := gif.DecodeAll(r); err == nil && len(g.Image) > 0 {
+		if len(g.Image) == 1 {
+			return g.Image[0], nil
+		}
+		step := m.Step
+		if step < 0 {
+			step = 0
+		}
+		frameIdx := step % len(g.Image)
+		return g.Image[frameIdx], nil
 	}
 
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
+	// If not GIF or gif.DecodeAll failed, rewind and use standard image.Decode
+	if seeker, ok := r.(io.Seeker); ok {
+		_, _ = seeker.Seek(0, io.SeekStart)
 	}
-	defer f.Close()
-
-	img, _, err := image.Decode(f)
+	img, _, err := image.Decode(r)
 	return img, err
 }
 
