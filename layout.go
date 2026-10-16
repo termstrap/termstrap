@@ -83,13 +83,29 @@ func BuildRenderTree(sel *goquery.Selection, matcher *CSSMatcher, termWidth int,
 		}
 		st := ComputedStyle{Display: DisplayInline}
 		if parentStyle != nil {
-			if parentStyle.Shimmer {
-				st.FgColor = parentStyle.FgColor
-				st.FgColorSet = parentStyle.FgColorSet
-				st.Bold = parentStyle.Bold
-				st.Shimmer = true
-				st.ShimmerHighlight = parentStyle.ShimmerHighlight
-			}
+			st.FgColor = parentStyle.FgColor
+			st.FgColorSet = parentStyle.FgColorSet
+			st.Bold = parentStyle.Bold
+			st.BoldSet = parentStyle.BoldSet
+			st.Italic = parentStyle.Italic
+			st.ItalicSet = parentStyle.ItalicSet
+			st.Underline = parentStyle.Underline
+			st.UnderlineSet = parentStyle.UnderlineSet
+			st.UnderlineStyle = parentStyle.UnderlineStyle
+			st.UnderlineStyleSet = parentStyle.UnderlineStyleSet
+			st.UnderlineColor = parentStyle.UnderlineColor
+			st.UnderlineColorSet = parentStyle.UnderlineColorSet
+			st.Strikethrough = parentStyle.Strikethrough
+			st.StrikethroughSet = parentStyle.StrikethroughSet
+			st.Faint = parentStyle.Faint
+			st.FaintSet = parentStyle.FaintSet
+			st.Blink = parentStyle.Blink
+			st.BlinkSet = parentStyle.BlinkSet
+			st.Shimmer = parentStyle.Shimmer
+			st.ShimmerSet = parentStyle.ShimmerSet
+			st.ShimmerHighlight = parentStyle.ShimmerHighlight
+			st.TextTransform = parentStyle.TextTransform
+			st.TextTransformSet = parentStyle.TextTransformSet
 		}
 		return &RenderNode{
 			Type:  NodeText,
