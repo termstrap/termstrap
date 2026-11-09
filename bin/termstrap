@@ -1,0 +1,32 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+$autoloadPaths = [
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/../../../vendor/autoload.php',
+];
+
+$loaded = false;
+foreach ($autoloadPaths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        $loaded = true;
+        break;
+    }
+}
+
+if (!$loaded) {
+    fwrite(STDERR, "Error: Autoloader not found. Run 'composer install'.\n");
+    exit(1);
+}
+
+use Symfony\Component\Console\Application;
+use Termstrap\Command\RenderCommand;
+
+$app = new Application('Termstrap', '1.0.0');
+$renderCmd = new RenderCommand();
+$app->addCommand($renderCmd);
+$app->setDefaultCommand('termstrap:render', true);
+$app->run();
