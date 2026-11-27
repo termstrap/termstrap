@@ -2,3 +2,9 @@ vendor/
 .DS_Store
 .phpunit.result.cache
 .phpunit.cache/
+.idea/
+.vscode/
+*.cache
+.env
+.env.*
+
