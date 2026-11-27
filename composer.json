@@ -1,5 +1,5 @@
 {
-    "name": "codes-sh/termstrap",
+    "name": "termstrap/termstrap",
     "description": "Native PHP port of Termstrap terminal rendering engine",
     "type": "library",
     "license": "MIT",
