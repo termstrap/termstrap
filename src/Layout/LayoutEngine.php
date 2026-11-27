@@ -326,6 +326,12 @@ final class LayoutEngine
                 foreach ($row['children'] as $i => $child) {
                     $span = $row['spans'][$i];
                     $colWidth = (int) (($remWidth * $span) / $remSpan);
+                    if ($node->tag !== 'tr' && $node->style->justifyContentMode === 'space-between' && $child->style->width <= 0 && $autoCount > 0) {
+                        $natural = self::naturalContentWidth($child);
+                        if ($natural > 0 && $natural < $colWidth) {
+                            $colWidth = $natural;
+                        }
+                    }
                     if ($colWidth < 1) {
                         $colWidth = 1;
                     }

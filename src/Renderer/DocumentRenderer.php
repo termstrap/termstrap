@@ -198,6 +198,11 @@ final class DocumentRenderer
     $vars = $ctx['matcher']->preprocessor !== null ? $ctx['matcher']->preprocessor->globalVars : [];
     $text = CodeHighlighter::highlight($text, $node->lang, $vars);
    }
+   $wrapCode = (bool) ($ctx['options']['wrap_code'] ?? false);
+   $shouldWrap = $wrapCode || in_array($node->style->whiteSpace, ['pre-wrap', 'normal', 'break-spaces'], true);
+   if ($shouldWrap && $node->contentWidth > 0) {
+    $text = TextWrapper::wrapText($text, $node->contentWidth);
+   }
    return AnsiStyle::applyLipglossStyle($node->style, $node->lipglossWidth, $targetHeight, $text, $ctx['step']);
   }
   if ($node->tag === 'ascii') {
@@ -281,7 +286,39 @@ final class DocumentRenderer
      $itemOutputs = $renderedItems;
     }
 
-    $rowOutputs[] = AnsiStyle::joinHorizontal($crossPos, ...$itemOutputs);
+    if ($node->style->justifyContentMode === 'space-between' && count($itemOutputs) > 1) {
+     $totalWidth = 0;
+     foreach ($itemOutputs as $it) {
+      $lines = explode("\n", $it);
+      $w = 0;
+      foreach ($lines as $l) {
+       $vw = Util::visualWidth($l);
+       if ($vw > $w) {
+        $w = $vw;
+       }
+      }
+      $totalWidth += $w;
+     }
+     $freeSpace = $node->contentWidth - $totalWidth;
+     if ($freeSpace > 0) {
+      $gaps = count($itemOutputs) - 1;
+      $baseGap = (int) ($freeSpace / $gaps);
+      $extra = $freeSpace % $gaps;
+      $joined = '';
+      foreach ($itemOutputs as $idx => $it) {
+       if ($idx > 0) {
+        $gapSize = $baseGap + ($idx <= $extra ? 1 : 0);
+        $joined .= str_repeat(' ', $gapSize);
+       }
+       $joined .= $it;
+      }
+      $rowOutputs[] = $joined;
+     } else {
+      $rowOutputs[] = AnsiStyle::joinHorizontal($crossPos, ...$itemOutputs);
+     }
+    } else {
+     $rowOutputs[] = AnsiStyle::joinHorizontal($crossPos, ...$itemOutputs);
+    }
    }
 
    $content = AnsiStyle::joinVertical('left', ...$rowOutputs);

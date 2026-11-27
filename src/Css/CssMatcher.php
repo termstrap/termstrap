@@ -175,16 +175,14 @@ final class CssMatcher
    $themeStr = 'bootstrap';
   }
 
-  if (empty($stylesheets)) {
-   if (isset(self::$builtInMatcherCache[$themeStr])) {
-    return self::$builtInMatcherCache[$themeStr];
-   }
-   $matcher = new self($themeStr, [], $rootPath);
-   self::$builtInMatcherCache[$themeStr] = $matcher;
-   return $matcher;
+  $cacheKey = $themeStr . '|' . ($rootPath ?? '') . '|' . md5(implode("\x00", $stylesheets));
+  if (isset(self::$builtInMatcherCache[$cacheKey])) {
+   return self::$builtInMatcherCache[$cacheKey];
   }
 
-  return new self($themeStr, $stylesheets, $rootPath);
+  $matcher = new self($themeStr, $stylesheets, $rootPath);
+  self::$builtInMatcherCache[$cacheKey] = $matcher;
+  return $matcher;
  }
 
  /**
@@ -708,6 +706,15 @@ final class CssMatcher
     break;
    case 'border-left':
     $s->borderLeft = $val === 'true' || $val === '1' || str_contains($val, 'solid');
+    if (self::borderWidthIsThick($val) || str_contains($val, 'thick')) {
+     $s->borderStyle = 'thick';
+    }
+    foreach (preg_split('/\s+/', $val, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $part) {
+     if (str_starts_with($part, '#') && strlen($part) >= 4) {
+      $s->borderLeftColor = $part;
+      $s->borderColor = $part;
+     }
+    }
     break;
    case 'border-right':
     $s->borderRight = $val === 'true' || $val === '1' || str_contains($val, 'solid');
@@ -859,6 +866,14 @@ final class CssMatcher
     };
     break;
 
+   case 'white-space':
+    $s->whiteSpaceSet = true;
+    $s->whiteSpace = match ($val) {
+     'normal', 'nowrap', 'pre', 'pre-wrap', 'pre-line', 'break-spaces' => $val,
+     default => '',
+    };
+    break;
+
    case 'box-shadow':
     $s->shadow = self::shadowSizeFromBoxShadow($val);
     break;
@@ -928,6 +943,7 @@ final class CssMatcher
 
    case 'justify-content':
     $s->justifyContentSet = true;
+    $s->justifyContentMode = $val;
     $s->justifyContent = match ($val) {
      'center' => 'center',
      'flex-end', 'end', 'right' => 'right',

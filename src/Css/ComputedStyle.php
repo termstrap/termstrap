@@ -76,11 +76,14 @@ final class ComputedStyle
     public bool $textAlignSet = false;
     public string $textTransform = ''; // "", "uppercase", "lowercase", "capitalize"
     public bool $textTransformSet = false;
+    public string $whiteSpace = ''; // "", "normal", "nowrap", "pre", "pre-wrap", "pre-line", "break-spaces"
+    public bool $whiteSpaceSet = false;
 
     // Flex alignment
     public string $alignItems = 'top'; // top, center, bottom
     public bool $alignItemsSet = false;
-    public string $justifyContent = 'left'; // left, center, right
+    public string $justifyContent = 'left'; // left, center, right, space-between
+    public string $justifyContentMode = ''; // "", "space-between", "space-around"
     public bool $justifyContentSet = false;
     public string $verticalAlign = 'top'; // top, center, bottom
     public bool $verticalAlignSet = false;
